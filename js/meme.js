@@ -1,0 +1,94 @@
+const MemeReward = {
+    apiUrl: 'https://api.apileague.com/retrieve-random-meme',
+    apiKey: null,
+    maxRetries: 3,
+    
+    init() {
+        this.apiKey = window.MEME_API_KEY || null;
+        this.createOverlay();
+    },
+
+    createOverlay() {
+        if (document.getElementById('meme-overlay')) return;
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'meme-overlay';
+        overlay.className = 'meme-overlay';
+        overlay.innerHTML = `
+            <div class="meme-content">
+                <button class="meme-close" id="meme-close" aria-label="Close">&times;</button>
+                <div class="meme-image-container">
+                    <img id="meme-image" src="" alt="Reward meme" />
+                </div>
+                <p class="meme-description" id="meme-description"></p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        document.getElementById('meme-close').addEventListener('click', () => this.hide());
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.hide();
+        });
+    },
+
+    async fetchMeme(retryCount = 0) {
+        if (!this.apiKey) {
+            return null;
+        }
+        
+        try {
+            const response = await fetch(`${this.apiUrl}?api-key=${this.apiKey}`, {
+                method: 'GET'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.type && data.type.startsWith('video')) {
+                if (retryCount < this.maxRetries) {
+                    return this.fetchMeme(retryCount + 1);
+                }
+                return null;
+            }
+            
+            return {
+                url: data.url,
+                description: data.description || '',
+                type: data.type
+            };
+        } catch (error) {
+            console.error('Failed to fetch meme:', error);
+            return null;
+        }
+    },
+
+    async show() {
+        const meme = await this.fetchMeme();
+        
+        if (!meme || !meme.url) {
+            return false;
+        }
+        
+        const overlay = document.getElementById('meme-overlay');
+        const image = document.getElementById('meme-image');
+        const description = document.getElementById('meme-description');
+        
+        image.src = meme.url;
+        description.textContent = meme.description;
+        
+        overlay.classList.add('active');
+        
+        return true;
+    },
+
+    hide() {
+        const overlay = document.getElementById('meme-overlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+    }
+};
+
