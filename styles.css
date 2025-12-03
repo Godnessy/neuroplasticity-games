@@ -309,6 +309,35 @@ body {
     gap: 0.25rem;
 }
 
+.level-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.level-nav-btn {
+    background: var(--color-bg);
+    border: none;
+    padding: 0.35rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--color-secondary);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.level-nav-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: white;
+}
+
+.level-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 .level-badge {
     font-size: 0.875rem;
     font-weight: 600;
@@ -567,6 +596,22 @@ body {
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--color-primary);
+}
+
+.input-error {
+    color: var(--color-error);
+    font-size: 0.875rem;
+    text-align: center;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(196, 69, 54, 0.1);
+    border-radius: 6px;
+    max-width: 250px;
+}
+
+.input-error small {
+    color: var(--color-text-muted);
+    font-style: italic;
 }
 
 .visual-selector {

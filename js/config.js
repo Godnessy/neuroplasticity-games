@@ -1,7 +1,9 @@
 window.MEME_API_KEY = 'ef3abcc781f24bee80224127b96ade24';
 
 window.CLOCK_CENTER_IMAGES = [
-    'images/characters/freddy.png'
+    'images/characters/freddy.png',
+    'images/characters/bonnie.png',
+    'images/characters/foxy.png'
 ];
 
 window.APP_CONFIG = {

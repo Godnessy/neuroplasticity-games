@@ -1,4 +1,7 @@
 const Levels = {
+    lastHour: null,
+    lastMinute: null,
+    
     config: [
         {
             id: 1,
@@ -284,14 +287,19 @@ const Levels = {
     },
 
     generateQuestion(levelConfig) {
-        const hour = this.randomFrom(levelConfig.hourOptions);
+        let hour = this.randomFromExcluding(levelConfig.hourOptions, this.lastHour);
         let minute;
         
         if (levelConfig.minuteOptions === 'any') {
-            minute = Math.floor(Math.random() * 60);
+            do {
+                minute = Math.floor(Math.random() * 60);
+            } while (minute === this.lastMinute && levelConfig.minuteOptions === 'any');
         } else {
-            minute = this.randomFrom(levelConfig.minuteOptions);
+            minute = this.randomFromExcluding(levelConfig.minuteOptions, this.lastMinute);
         }
+        
+        this.lastHour = hour;
+        this.lastMinute = minute;
         
         const second = levelConfig.includeSecond ? Math.floor(Math.random() * 60) : null;
         
@@ -422,6 +430,13 @@ const Levels = {
 
     randomFrom(array) {
         return array[Math.floor(Math.random() * array.length)];
+    },
+
+    randomFromExcluding(array, exclude) {
+        if (array.length <= 1) return array[0];
+        const filtered = array.filter(item => item !== exclude);
+        if (filtered.length === 0) return array[0];
+        return filtered[Math.floor(Math.random() * filtered.length)];
     },
 
     shuffle(array) {

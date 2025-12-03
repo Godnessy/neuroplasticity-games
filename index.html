@@ -57,7 +57,19 @@
             <section id="screen-game" class="screen screen-game">
                 <div class="game-header">
                     <div class="level-info">
-                        <span class="level-badge">Level <span id="current-level">1</span></span>
+                        <div class="level-nav">
+                            <button id="btn-prev-level" class="level-nav-btn" aria-label="Previous level">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M15 18l-6-6 6-6"/>
+                                </svg>
+                            </button>
+                            <span class="level-badge">Level <span id="current-level">1</span></span>
+                            <button id="btn-next-level-nav" class="level-nav-btn" aria-label="Next level">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M9 18l6-6-6-6"/>
+                                </svg>
+                            </button>
+                        </div>
                         <span class="level-name" id="level-name">Single Hand Recognition</span>
                     </div>
                     <div class="session-timer" id="session-timer">

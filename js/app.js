@@ -11,7 +11,11 @@ const App = {
         showingNumbers: false,
         hintsUsed: 0,
         selectedHour: null,
-        selectedMinute: null
+        selectedMinute: null,
+        lastActivityTime: null,
+        idleCheckInterval: null,
+        consecutiveCorrect: 0,
+        characterIndex: 0
     },
 
     elements: {},
@@ -105,8 +109,8 @@ const App = {
     loadCharacterImage() {
         const images = window.CLOCK_CENTER_IMAGES || [];
         if (images.length > 0) {
-            const randomImage = images[Math.floor(Math.random() * images.length)];
-            Clock.setCenterImage(randomImage, 70);
+            this.state.characterIndex = (this.state.characterIndex + 1) % images.length;
+            Clock.setCenterImage(images[this.state.characterIndex], 70);
         }
     },
 
@@ -134,6 +138,8 @@ const App = {
         
         document.getElementById('btn-next-level').addEventListener('click', () => this.advanceLevel());
         document.getElementById('btn-repeat-level').addEventListener('click', () => this.repeatLevel());
+        document.getElementById('btn-prev-level').addEventListener('click', () => this.goToPrevLevel());
+        document.getElementById('btn-next-level-nav').addEventListener('click', () => this.goToNextLevel());
         
         document.getElementById('btn-continue-break').addEventListener('click', () => this.continueAfterBreak());
         document.getElementById('btn-end-session').addEventListener('click', () => this.endSession());
@@ -256,7 +262,10 @@ const App = {
         this.elements.questionsDone.textContent = '0';
         this.elements.progressFill.style.width = '0%';
         
+        this.updateLevelNavButtons();
         this.startSessionTimer();
+        this.startIdleDetection();
+        this.state.consecutiveCorrect = 0;
         this.setInputMethod();
         this.showScreen('game');
         this.generateQuestion();
@@ -277,6 +286,41 @@ const App = {
             clearInterval(this.state.sessionTimerInterval);
             this.state.sessionTimerInterval = null;
         }
+    },
+
+    startIdleDetection() {
+        this.state.lastActivityTime = Date.now();
+        
+        const activityHandler = () => {
+            this.state.lastActivityTime = Date.now();
+        };
+        
+        document.addEventListener('mousemove', activityHandler);
+        document.addEventListener('keydown', activityHandler);
+        document.addEventListener('click', activityHandler);
+        document.addEventListener('touchstart', activityHandler);
+        
+        this.state.idleCheckInterval = setInterval(() => {
+            const idleTime = Date.now() - this.state.lastActivityTime;
+            if (idleTime >= 180000) {
+                this.pauseForIdle();
+            }
+        }, 10000);
+    },
+
+    stopIdleDetection() {
+        if (this.state.idleCheckInterval) {
+            clearInterval(this.state.idleCheckInterval);
+            this.state.idleCheckInterval = null;
+        }
+    },
+
+    pauseForIdle() {
+        this.stopTimer();
+        this.stopSessionTimer();
+        alert('Session paused due to inactivity. Click OK to continue.');
+        this.state.lastActivityTime = Date.now();
+        this.startSessionTimer();
     },
 
     setInputMethod() {
@@ -342,6 +386,9 @@ const App = {
         const question = Levels.generateQuestion(levelConfig);
         this.state.currentQuestion = question;
         this.state.questionStartTime = Date.now();
+        
+        this.loadCharacterImage();
+        this.hideInputError();
         
         const settings = Storage.getSettings();
         const showNumbers = settings.alwaysShowNumbers || levelConfig.showNumbers || this.state.showingNumbers;
@@ -448,22 +495,47 @@ const App = {
         const hourOnly = !levelConfig.hands.includes('minute');
         
         if (isNaN(hour) || hour < 1 || hour > 12) {
+            this.showInputError('Enter a valid hour (1-12)');
             this.elements.inputHour.focus();
             return;
         }
         
         if (hourOnly) {
+            this.hideInputError();
             this.processAnswer(hour, 0);
             return;
         }
         
         const minute = parseInt(this.elements.inputMinute.value, 10);
         if (isNaN(minute) || minute < 0 || minute > 59) {
+            this.showInputError('Enter valid minutes (0-59)');
             this.elements.inputMinute.focus();
             return;
         }
         
+        this.hideInputError();
         this.processAnswer(hour, minute);
+    },
+
+    showInputError(message) {
+        let errorEl = document.getElementById('input-error');
+        if (!errorEl) {
+            errorEl = document.createElement('p');
+            errorEl.id = 'input-error';
+            errorEl.className = 'input-error';
+            const submitBtn = document.getElementById('btn-submit-text');
+            submitBtn.parentNode.insertBefore(errorEl, submitBtn);
+        }
+        const hint = Levels.getHint(Levels.getLevel(this.state.currentLevel), 0);
+        errorEl.innerHTML = `<strong>${message}</strong><br><small>${hint}</small>`;
+        errorEl.style.display = 'block';
+    },
+
+    hideInputError() {
+        const errorEl = document.getElementById('input-error');
+        if (errorEl) {
+            errorEl.style.display = 'none';
+        }
     },
 
     submitVisualAnswer() {
@@ -567,7 +639,13 @@ const App = {
         this.elements.feedbackOverlay.classList.add('active');
         
         if (isCorrect) {
-            MemeReward.show();
+            this.state.consecutiveCorrect++;
+            if (this.state.consecutiveCorrect >= 3) {
+                MemeReward.show();
+                this.state.consecutiveCorrect = 0;
+            }
+        } else {
+            this.state.consecutiveCorrect = 0;
         }
     },
 
@@ -605,6 +683,7 @@ const App = {
 
     completeLevelSession() {
         this.stopSessionTimer();
+        this.stopIdleDetection();
         const session = this.state.session;
         const accuracy = Adaptive.calculateSessionAccuracy(session);
         const duration = Date.now() - session.startTime;
@@ -664,6 +743,27 @@ const App = {
 
     repeatLevel() {
         this.startSession();
+    },
+
+    goToPrevLevel() {
+        if (this.state.currentLevel > 1) {
+            this.state.currentLevel--;
+            this.startSession();
+        }
+    },
+
+    goToNextLevel() {
+        if (this.state.currentLevel < 12) {
+            this.state.currentLevel++;
+            this.startSession();
+        }
+    },
+
+    updateLevelNavButtons() {
+        const prevBtn = document.getElementById('btn-prev-level');
+        const nextBtn = document.getElementById('btn-next-level-nav');
+        prevBtn.disabled = this.state.currentLevel <= 1;
+        nextBtn.disabled = this.state.currentLevel >= 12;
     },
 
     showHint() {
@@ -828,6 +928,7 @@ const App = {
         this.state.session = null;
         this.stopTimer();
         this.stopSessionTimer();
+        this.stopIdleDetection();
         this.showScreen('welcome');
     },
 

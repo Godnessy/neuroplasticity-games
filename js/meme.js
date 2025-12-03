@@ -25,9 +25,19 @@ const MemeReward = {
         `;
         document.body.appendChild(overlay);
         
-        document.getElementById('meme-close').addEventListener('click', () => this.hide());
+        document.getElementById('meme-close').addEventListener('click', () => {
+            this.hide();
+            if (typeof App !== 'undefined' && App.nextQuestion) {
+                App.nextQuestion();
+            }
+        });
         overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) this.hide();
+            if (e.target === overlay) {
+                this.hide();
+                if (typeof App !== 'undefined' && App.nextQuestion) {
+                    App.nextQuestion();
+                }
+            }
         });
     },
 
