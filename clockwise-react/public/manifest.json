@@ -1,0 +1,12 @@
+{
+    "name": "ClockWise - Learn to Tell Time",
+    "short_name": "ClockWise",
+    "description": "An interactive clock reading game for children with learning difficulties",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#F0F4F8",
+    "theme_color": "#2D5A7B"
+}
+
+
+
