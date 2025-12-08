@@ -3,7 +3,9 @@ const Storage = {
         SETTINGS: 'clockwise_settings',
         PROGRESS: 'clockwise_progress',
         SESSIONS: 'clockwise_sessions',
-        CURRENT_SESSION: 'clockwise_current_session'
+        CURRENT_SESSION: 'clockwise_current_session',
+        ROBUX_COUNT: 'clockwise_robux_count',
+        ROBUX_LAST_UPDATE: 'clockwise_robux_last_update'
     },
 
     defaultSettings: {
@@ -171,6 +173,33 @@ const Storage = {
         }
         
         return weakAreas.sort((a, b) => b.errorRate - a.errorRate).slice(0, 5);
+    },
+
+    getRobuxCount() {
+        try {
+            const count = localStorage.getItem(this.KEYS.ROBUX_COUNT);
+            return count ? parseInt(count, 10) : 0;
+        } catch (e) {
+            return 0;
+        }
+    },
+
+    setRobuxCount(count) {
+        try {
+            localStorage.setItem(this.KEYS.ROBUX_COUNT, count.toString());
+            localStorage.setItem(this.KEYS.ROBUX_LAST_UPDATE, Date.now().toString());
+        } catch (e) {
+            console.error('Failed to save Robux count:', e);
+        }
+    },
+
+    getLastRobuxUpdate() {
+        try {
+            const lastUpdate = localStorage.getItem(this.KEYS.ROBUX_LAST_UPDATE);
+            return lastUpdate ? parseInt(lastUpdate, 10) : Date.now();
+        } catch (e) {
+            return Date.now();
+        }
     }
 };
 

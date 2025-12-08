@@ -36,6 +36,11 @@
         <main class="main">
             <section id="screen-welcome" class="screen screen-welcome active">
                 <div class="welcome-content">
+                    <div class="welcome-robux" id="welcome-robux">
+                        <img src="images/robux.png" alt="Robux" class="robux-icon" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<span class=\'robux-emoji\'>💎</span>');">
+                        <span class="robux-count" id="welcome-robux-count">0</span>
+                        <button id="btn-reset-robux" class="btn-reset-robux" title="Reset Robux">↺</button>
+                    </div>
                     <div class="welcome-clock-icon">
                         <svg viewBox="0 0 100 100" width="120" height="120">
                             <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-primary)" stroke-width="3"/>
@@ -56,6 +61,12 @@
 
             <section id="screen-game" class="screen screen-game">
                 <div class="game-header">
+                    <button id="btn-home" class="btn btn-back" aria-label="Return to home">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </button>
                     <div class="level-info">
                         <div class="level-nav">
                             <button id="btn-prev-level" class="level-nav-btn" aria-label="Previous level">
@@ -85,6 +96,12 @@
                         </div>
                         <span class="progress-text"><span id="questions-done">0</span>/<span id="questions-total">10</span></span>
                     </div>
+                    <div class="robux-counter" id="robux-counter">
+                        <img src="images/robux.png" alt="Robux" class="robux-icon" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<span class=\'robux-emoji\'>💎</span>');">
+                        <span class="robux-count" id="robux-count">0</span>
+                        <button id="btn-reset-robux-game" class="btn-reset-robux" title="Reset Robux">↺</button>
+                        <div class="robux-sparkle"></div>
+                    </div>
                     <div class="timer-container" id="timer-container" style="display:none;">
                         <svg class="timer-ring" width="50" height="50">
                             <circle class="timer-ring-bg" cx="25" cy="25" r="22" fill="none" stroke-width="4"/>
@@ -100,10 +117,21 @@
                         <div class="clock-wrapper" id="clock-wrapper">
                             <svg id="clock-svg" viewBox="0 0 300 300" class="clock-svg"></svg>
                         </div>
+                        <div class="time-display-container" id="time-display-container" style="display:none;">
+                            <div class="time-display-12" id="time-display-12">
+                                <span class="time-label">12-hour:</span>
+                                <span class="time-value" id="time-value-12">--:--</span>
+                            </div>
+                            <div class="time-display-24" id="time-display-24">
+                                <span class="time-label">24-hour:</span>
+                                <span class="time-value" id="time-value-24">--:--</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="prompt-container">
                         <p class="prompt-text" id="prompt-text">What time is this?</p>
+                        <p class="reminder-text" id="reminder-text" style="display:none;">Remember: When the hour hand is between two numbers, use the smaller number.</p>
                         <p class="hint-text" id="hint-text" style="display:none;"></p>
                     </div>
 

@@ -42,37 +42,7 @@ const MemeReward = {
     },
 
     async fetchMeme(retryCount = 0) {
-        if (!this.apiKey) {
-            return null;
-        }
-        
-        try {
-            const response = await fetch(`${this.apiUrl}?api-key=${this.apiKey}`, {
-                method: 'GET'
-            });
-            
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
-            
-            const data = await response.json();
-            
-            if (data.type && data.type.startsWith('video')) {
-                if (retryCount < this.maxRetries) {
-                    return this.fetchMeme(retryCount + 1);
-                }
-                return null;
-            }
-            
-            return {
-                url: data.url,
-                description: data.description || '',
-                type: data.type
-            };
-        } catch (error) {
-            console.error('Failed to fetch meme:', error);
-            return null;
-        }
+        return null;
     },
 
     async show() {

@@ -75,7 +75,7 @@ const Levels = {
             description: 'Learn half-past times (:30)',
             research: 'Tallal: Gradual difficulty increase',
             hands: ['hour', 'minute'],
-            timeAllowed: 20,
+            timeAllowed: null,
             showNumbers: true,
             minuteOptions: [0, 30],
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -97,7 +97,7 @@ const Levels = {
             description: 'Learn quarter past (:15) and quarter to (:45)',
             research: 'Arrowsmith: Building relational concepts',
             hands: ['hour', 'minute'],
-            timeAllowed: 15,
+            timeAllowed: null,
             showNumbers: true,
             minuteOptions: [0, 15, 30, 45],
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -119,7 +119,7 @@ const Levels = {
             description: 'Read times at 5-minute marks',
             research: 'Merzenich: Intensive repetition at competence edge',
             hands: ['hour', 'minute'],
-            timeAllowed: 15,
+            timeAllowed: null,
             showNumbers: true,
             minuteOptions: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
@@ -137,147 +137,146 @@ const Levels = {
         },
         {
             id: 7,
-            name: 'Three Hands - Adding Seconds',
-            description: 'Recognize the second hand',
-            research: 'Arrowsmith: Three-dimensional relationships (core Symbol Relations)',
-            hands: ['hour', 'minute', 'second'],
-            timeAllowed: 15,
-            showNumbers: false,
-            minuteOptions: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
-            hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            includeSecond: true,
+            name: 'Introduction to 24-Hour Time (PM)',
+            description: 'Learn afternoon hours in 24-hour format',
+            research: 'Merzenich: Gradual complexity increase with familiar context',
+            hands: ['hour', 'minute'],
+            timeAllowed: null,
+            showNumbers: true,
+            minuteOptions: [0, 15, 30, 45],
+            hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            show24Hour: true,
+            pmOnly: true,
             questionsRequired: 10,
             hints: [
-                'The thinnest hand is the second hand - you can ignore it for now.',
-                'Focus on the hour (thick) and minute (medium) hands.',
-                'Different colors help you tell the hands apart.'
+                'After 12:00 noon, we add 12 to the hour.',
+                '1:00 PM = 13:00 in 24-hour time.',
+                '6:00 PM = 18:00 (6 + 12).'
             ],
             mediatedPrompts: [
-                'Now you\'re processing THREE pieces of information!',
-                'Your brain is learning to filter out what\'s not needed.',
-                'This is advanced Symbol Relations training - like the Arrowsmith clocks exercise!'
+                'You\'re learning how adults tell time in many countries!',
+                'This is the time format used in schedules and computers.',
+                'Think: afternoon hours = hour + 12!'
             ]
         },
         {
             id: 8,
-            name: 'Three Hands - Any Time',
-            description: 'Read any minute with three hands visible',
-            research: 'Merzenich: Pushing competence boundary',
-            hands: ['hour', 'minute', 'second'],
-            timeAllowed: 12,
-            showNumbers: false,
-            minuteOptions: 'any',
-            hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            includeSecond: true,
+            name: 'Morning Hours in 24-Hour Format',
+            description: 'Learn morning hours and midnight in 24-hour time',
+            research: 'Arrowsmith: Symbol mapping between formats',
+            hands: ['hour', 'minute'],
+            timeAllowed: null,
+            showNumbers: true,
+            minuteOptions: [0, 15, 30, 45],
+            hourOptions: [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+            show24Hour: true,
+            amOnly: true,
             questionsRequired: 10,
             hints: [
-                'Look at where the minute hand is between the numbers.',
-                'Each small tick = 1 minute.',
-                'The hour hand position tells you if it\'s closer to this hour or the next.'
+                'Midnight is 00:00 in 24-hour time.',
+                '1:00 AM = 01:00.',
+                'Morning hours stay mostly the same, just add a zero in front!'
             ],
             mediatedPrompts: [
-                'You can now read any time with three hands!',
-                'Notice how your brain automatically focuses on the right hands.',
-                'This skill transfers to reading complex information in other areas!'
+                'Midnight starts a new day at 00:00!',
+                'Morning hours are easy - they look almost the same.',
+                'Notice: 12:00 midnight = 00:00, 12:00 noon = 12:00!'
             ]
         },
         {
             id: 9,
-            name: 'Selective Attention',
-            description: 'Ignore distractor hands',
-            research: 'Arrowsmith: Advanced Symbol Relations with selective attention',
-            hands: ['hour', 'minute', 'second'],
-            timeAllowed: 12,
-            showNumbers: false,
-            minuteOptions: 'any',
+            name: 'Mixed 12/24 Hour Conversion',
+            description: 'Practice converting between both formats',
+            research: 'Tallal: Rapid switching builds cognitive flexibility',
+            hands: ['hour', 'minute'],
+            timeAllowed: null,
+            showNumbers: true,
+            minuteOptions: [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            includeSecond: true,
-            includeDistractors: true,
-            distractorCount: 1,
+            show24Hour: true,
+            mixedFormat: true,
             questionsRequired: 10,
             hints: [
-                'The dashed hand is a distractor - ignore it!',
-                'Focus only on the SOLID hands.',
-                'Your brain can learn to filter out distractions.'
+                'Read the analog clock, then convert to the requested format.',
+                'Remember: PM hours = add 12 (except 12 PM).',
+                'AM hours mostly stay the same (except 12 AM = 00:00).'
             ],
             mediatedPrompts: [
-                'Excellent selective attention! You ignored the distractor.',
-                'This trains your brain to focus on relevant information.',
-                'The dashed hand tests your ability to filter - great job!'
+                'You\'re becoming fluent in both time formats!',
+                'This flexibility helps your brain adapt to different situations.',
+                'Real world skill: reading train schedules and digital devices!'
             ]
         },
         {
             id: 10,
-            name: 'Multiple Distractors',
-            description: 'Filter multiple irrelevant hands',
-            research: 'Arrowsmith: Maximum Symbol Relations complexity',
-            hands: ['hour', 'minute', 'second'],
-            timeAllowed: 10,
+            name: 'Real-World 24-Hour Applications',
+            description: 'Practice with schedules and timetables',
+            research: 'Feuerstein: Bridging to real-world application',
+            hands: ['hour', 'minute'],
+            timeAllowed: null,
             showNumbers: false,
             minuteOptions: 'any',
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            includeSecond: true,
-            includeDistractors: true,
-            distractorCount: 2,
+            show24Hour: true,
+            realWorldContext: true,
             questionsRequired: 10,
             hints: [
-                'Multiple dashed hands - ignore them all!',
-                'Only solid hands show the real time.',
-                'Practice focusing only on what matters.'
+                'Think about when this might happen in your day.',
+                'Bus and train schedules use 24-hour time.',
+                'TV programs often show times in 24-hour format.'
             ],
             mediatedPrompts: [
-                'Your selective attention is exceptional!',
-                'Processing 5 hands and correctly filtering 2 - impressive!',
-                'This level of focus helps with reading comprehension too!'
+                'The bus leaves at 15:30 - that\'s 3:30 PM!',
+                'Your favorite show is at 19:00 - that\'s 7:00 PM!',
+                'You\'re mastering a crucial life skill!'
             ]
         },
         {
             id: 11,
-            name: 'Elapsed Time',
-            description: 'Calculate time differences',
-            research: 'Feuerstein: Higher-order reasoning and bridging',
+            name: 'Time Calculations in 24-Hour',
+            description: 'Add and subtract time in 24-hour format',
+            research: 'Merzenich: Complex cognitive operations at mastery level',
             hands: ['hour', 'minute'],
-            timeAllowed: 15,
+            timeAllowed: null,
             showNumbers: false,
             minuteOptions: 'any',
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            questionType: 'elapsed',
+            show24Hour: true,
+            questionType: 'calculation',
             questionsRequired: 10,
             hints: [
-                'Think about how the hands move forward.',
-                'Add the minutes, then see if you pass an hour.',
-                'It helps to imagine the minute hand moving.'
+                'Add hours and minutes separately.',
+                'If you go past 23:59, you start a new day at 00:00.',
+                'Break complex calculations into steps.'
             ],
             mediatedPrompts: [
-                'You\'re now reasoning about time, not just reading it!',
-                'This skill helps plan your day and manage activities.',
-                'Real-world connection: What time will dinner be ready if it takes 30 minutes?'
+                'If the movie starts at 18:30 and lasts 2 hours, it ends at 20:30!',
+                'You\'re doing mental math with time - excellent brain training!',
+                'This helps with planning and scheduling in daily life.'
             ]
         },
         {
             id: 12,
-            name: 'Time Master',
-            description: 'Mixed challenges with all skills',
-            research: 'Integration: All neuroplasticity principles combined',
-            hands: ['hour', 'minute', 'second'],
-            timeAllowed: 10,
+            name: '24-Hour Time Master',
+            description: 'Master all 24-hour time skills',
+            research: 'Integration: Full neuroplastic adaptation achieved',
+            hands: ['hour', 'minute'],
+            timeAllowed: null,
             showNumbers: false,
             minuteOptions: 'any',
             hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            includeSecond: true,
-            includeDistractors: true,
-            distractorCount: 2,
-            mixedQuestionTypes: true,
-            questionsRequired: 10,
+            show24Hour: true,
+            masterLevel: true,
+            questionsRequired: 15,
             hints: [
-                'Use all your skills together!',
-                'Break it down: identify hands, filter distractors, read time.',
-                'You\'ve trained for this - trust your brain!'
+                'You know this! Trust your training.',
+                'Quick conversions show your brain has adapted.',
+                'Apply everything you\'ve learned!'
             ],
             mediatedPrompts: [
-                'You\'ve completed the full Symbol Relations progression!',
-                'Your brain has physically changed through this training.',
-                'These skills will help with reading, math, and problem-solving!'
+                'You\'ve mastered both 12 and 24-hour time formats!',
+                'Your brain can now effortlessly switch between systems.',
+                'This cognitive flexibility will help you in many areas of life!'
             ]
         }
     ],
@@ -305,10 +304,21 @@ const Levels = {
         
         let questionType = 'standard';
         let elapsedMinutes = 0;
+        let isPM = false;
         
-        if (levelConfig.questionType === 'elapsed' || 
+        if (levelConfig.show24Hour) {
+            if (levelConfig.pmOnly) {
+                isPM = true;
+            } else if (levelConfig.amOnly) {
+                isPM = false;
+            } else if (levelConfig.mixedFormat || levelConfig.realWorldContext) {
+                isPM = Math.random() > 0.5;
+            }
+        }
+        
+        if (levelConfig.questionType === 'elapsed' || levelConfig.questionType === 'calculation' || 
             (levelConfig.mixedQuestionTypes && Math.random() > 0.6)) {
-            questionType = 'elapsed';
+            questionType = levelConfig.questionType === 'calculation' ? 'calculation' : 'elapsed';
             elapsedMinutes = this.randomFrom([15, 20, 30, 45]);
         }
         
@@ -322,7 +332,36 @@ const Levels = {
         
         let prompt, correctAnswer;
         
-        if (questionType === 'elapsed') {
+        if (levelConfig.show24Hour) {
+            const time24 = this.convertTo24Hour(hour, minute, isPM);
+            
+            if (levelConfig.realWorldContext) {
+                const contexts = [
+                    'The train departs at',
+                    'The bus arrives at',
+                    'The TV show starts at',
+                    'The store closes at',
+                    'School begins at'
+                ];
+                const context = this.randomFrom(contexts);
+                prompt = `${context} this time. What is it in 24-hour format?`;
+            } else if (levelConfig.mixedFormat) {
+                const askFor24 = Math.random() > 0.5;
+                prompt = askFor24 
+                    ? 'What is this time in 24-hour format?'
+                    : 'What is this time in 12-hour format (with AM/PM)?';
+            } else {
+                prompt = 'What time does this clock show? (Use 24-hour format)';
+            }
+            
+            correctAnswer = {
+                hour: hour,
+                minute: minute,
+                hour24: time24.hour,
+                minute24: time24.minute,
+                isPM: isPM
+            };
+        } else if (questionType === 'elapsed') {
             prompt = `The clock shows the current time. What time will it be in ${elapsedMinutes} minutes?`;
             const newMinutes = minute + elapsedMinutes;
             const newHour = newMinutes >= 60 ? (hour % 12) + 1 : hour;
@@ -349,8 +388,44 @@ const Levels = {
             correctAnswer,
             questionType,
             elapsedMinutes,
+            isPM,
             handCombination: `${hands.length}hands_${levelConfig.includeDistractors ? 'distract' : 'clean'}`
         };
+    },
+
+    convertTo24Hour(hour12, minute, isPM) {
+        let hour24;
+        if (hour12 === 12) {
+            hour24 = isPM ? 12 : 0;
+        } else {
+            hour24 = isPM ? hour12 + 12 : hour12;
+        }
+        return { hour: hour24, minute: minute };
+    },
+
+    convertTo12Hour(hour24, minute) {
+        let hour12;
+        let isPM = false;
+        
+        if (hour24 === 0) {
+            hour12 = 12;
+            isPM = false;
+        } else if (hour24 === 12) {
+            hour12 = 12;
+            isPM = true;
+        } else if (hour24 > 12) {
+            hour12 = hour24 - 12;
+            isPM = true;
+        } else {
+            hour12 = hour24;
+            isPM = false;
+        }
+        
+        return { hour: hour12, minute: minute, isPM: isPM };
+    },
+
+    format24HourTime(hour, minute) {
+        return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
     },
 
     generateChoices(correctAnswer, levelConfig) {
@@ -405,8 +480,18 @@ const Levels = {
     getExplanation(question, userAnswer, isCorrect, levelConfig = null) {
         const correct = question.correctAnswer;
         const hourOnly = levelConfig ? !levelConfig.hands.includes('minute') : (correct.minute === 0 && question.hands && question.hands.length === 1);
+        const is24Hour = levelConfig && levelConfig.show24Hour;
         
-        if (hourOnly) {
+        if (is24Hour) {
+            const time12 = `${correct.hour}:${correct.minute.toString().padStart(2, '0')} ${correct.isPM ? 'PM' : 'AM'}`;
+            const time24 = this.format24HourTime(correct.hour24, correct.minute24);
+            
+            if (isCorrect) {
+                return `Yes! ${time12} = ${time24} in 24-hour format.`;
+            } else {
+                return `The correct answer is ${time24} (${time12}).`;
+            }
+        } else if (hourOnly) {
             if (isCorrect) {
                 return `The hand points to ${correct.hour}. That's ${correct.hour} o'clock!`;
             } else {

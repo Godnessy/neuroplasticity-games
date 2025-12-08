@@ -37,3 +37,5 @@ Open `index.html` in a browser or serve with any static file server.
 - **Paula Tallal**: Adaptive pacing
 - **Reuven Feuerstein**: Mediated learning prompts
 
+
+

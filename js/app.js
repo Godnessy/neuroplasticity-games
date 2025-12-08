@@ -15,23 +15,95 @@ const App = {
         lastActivityTime: null,
         idleCheckInterval: null,
         consecutiveCorrect: 0,
-        characterIndex: 0
+        characterIndex: 0,
+        isProcessing: false,
+        lastAnswerCorrect: false,
+        lastRobuxMinute: 0,
+        modalShownTime: 0
     },
 
     elements: {},
 
     init() {
-        this.cacheElements();
+        this.elements = this.cacheElements();
         this.loadSettings();
         this.loadProgress();
         this.bindEvents();
-        this.initModules();
+        Audio.init(Storage.getSettings().audioEnabled);
+        MemeReward.init();
+        this.initRobuxCounter();
         this.checkContinue();
         this.loadCharacterImage();
     },
 
+    initRobuxCounter() {
+        const currentRobux = Storage.getRobuxCount();
+        this.updateRobuxDisplay(currentRobux);
+        const welcomeRobux = document.getElementById('welcome-robux-count');
+        if (welcomeRobux) {
+            welcomeRobux.textContent = currentRobux;
+        }
+    },
+    
+    resetRobux() {
+        if (confirm('Reset Robux counter to 0?')) {
+            Storage.setRobuxCount(0);
+            this.updateRobuxDisplay(0);
+            const welcomeRobux = document.getElementById('welcome-robux-count');
+            if (welcomeRobux) {
+                welcomeRobux.textContent = '0';
+            }
+        }
+    },
+
+    startRobuxTimer() {
+        if (this.state.robuxInterval) return;
+        this.state.lastRobuxMinute = 0;
+        
+        const self = this;
+        this.state.robuxInterval = setInterval(function() {
+            const elapsed = Date.now() - self.state.sessionStartTime;
+            const currentMinute = Math.floor(elapsed / 60000);
+            
+            if (currentMinute > self.state.lastRobuxMinute) {
+                self.state.lastRobuxMinute = currentMinute;
+                const current = Storage.getRobuxCount();
+                const updated = current + 1;
+                Storage.setRobuxCount(updated);
+                self.updateRobuxDisplay(updated);
+                self.animateRobuxEarn();
+            }
+        }, 1000);
+    },
+
+    stopRobuxTimer() {
+        if (this.state.robuxInterval) {
+            clearInterval(this.state.robuxInterval);
+            this.state.robuxInterval = null;
+        }
+    },
+
+    updateRobuxDisplay(count) {
+        if (this.elements.robuxCount) {
+            this.elements.robuxCount.textContent = count;
+        }
+        const welcomeRobux = document.getElementById('welcome-robux-count');
+        if (welcomeRobux) {
+            welcomeRobux.textContent = count;
+        }
+    },
+
+    animateRobuxEarn() {
+        if (this.elements.robuxCounter) {
+            this.elements.robuxCounter.classList.add('earning');
+            setTimeout(() => {
+                this.elements.robuxCounter.classList.remove('earning');
+            }, 500);
+        }
+    },
+
     cacheElements() {
-        this.elements = {
+        return {
             screens: {
                 welcome: document.getElementById('screen-welcome'),
                 game: document.getElementById('screen-game'),
@@ -44,6 +116,7 @@ const App = {
             clockWrapper: document.getElementById('clock-wrapper'),
             legend: document.getElementById('hand-legend'),
             prompt: document.getElementById('prompt-text'),
+            reminder: document.getElementById('reminder-text'),
             hint: document.getElementById('hint-text'),
             levelBadge: document.getElementById('current-level'),
             levelName: document.getElementById('level-name'),
@@ -65,7 +138,12 @@ const App = {
             inputText: document.getElementById('input-text'),
             inputVisual: document.getElementById('input-visual'),
             inputMultiple: document.getElementById('input-multiple'),
-            sessionTimerText: document.getElementById('session-timer-text')
+            sessionTimerText: document.getElementById('session-timer-text'),
+            timeDisplayContainer: document.getElementById('time-display-container'),
+            timeDisplay12: document.getElementById('time-value-12'),
+            timeDisplay24: document.getElementById('time-value-24'),
+            robuxCounter: document.getElementById('robux-counter'),
+            robuxCount: document.getElementById('robux-count')
         };
     },
 
@@ -119,6 +197,9 @@ const App = {
         const continueBtn = document.getElementById('btn-continue');
         if (progress.currentLevel > 1 || progress.totalQuestions > 0) {
             continueBtn.style.display = 'inline-flex';
+            this.state.currentLevel = progress.currentLevel;
+        } else {
+            continueBtn.style.display = 'none';
         }
     },
 
@@ -146,14 +227,41 @@ const App = {
         
         document.getElementById('btn-export-data').addEventListener('click', () => this.exportData());
         document.getElementById('btn-reset-progress').addEventListener('click', () => this.resetProgress());
+        document.getElementById('btn-reset-robux').addEventListener('click', () => this.resetRobux());
+        document.getElementById('btn-reset-robux-game').addEventListener('click', () => this.resetRobux());
+        document.getElementById('btn-home').addEventListener('click', () => this.goHome());
         
         this.bindSettingsEvents();
 
         this.elements.inputHour.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this.elements.inputMinute.focus();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.isProcessing) return;
+                const levelConfig = Levels.getLevel(this.state.currentLevel);
+                const hourOnly = !levelConfig.hands.includes('minute');
+                if (hourOnly || this.elements.inputMinute.offsetParent === null) {
+                    this.submitTextAnswer();
+                } else {
+                    this.elements.inputMinute.focus();
+                }
+            }
         });
         this.elements.inputMinute.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') this.submitTextAnswer();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (this.state.isProcessing) return;
+                this.submitTextAnswer();
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter' && this.elements.feedbackOverlay.classList.contains('active')) {
+                if (Date.now() - this.state.modalShownTime > 300) {
+                    this.nextQuestion();
+                }
+            }
         });
     },
 
@@ -244,7 +352,7 @@ const App = {
         this.startSession();
     },
 
-    startSession() {
+    startSession(preserveSessionTime = false) {
         this.state.session = {
             level: this.state.currentLevel,
             answers: [],
@@ -252,7 +360,9 @@ const App = {
             bestStreak: 0,
             currentStreak: 0
         };
-        this.state.sessionStartTime = Date.now();
+        if (!preserveSessionTime) {
+            this.state.sessionStartTime = Date.now();
+        }
         this.state.hintsUsed = 0;
         
         const levelConfig = Levels.getLevel(this.state.currentLevel);
@@ -263,7 +373,7 @@ const App = {
         this.elements.progressFill.style.width = '0%';
         
         this.updateLevelNavButtons();
-        this.startSessionTimer();
+        this.startSessionTimer(preserveSessionTime);
         this.startIdleDetection();
         this.state.consecutiveCorrect = 0;
         this.setInputMethod();
@@ -271,14 +381,18 @@ const App = {
         this.generateQuestion();
     },
 
-    startSessionTimer() {
+    startSessionTimer(preserveTime = false) {
         this.stopSessionTimer();
-        this.elements.sessionTimerText.textContent = '0:00';
+        if (!preserveTime) {
+            this.elements.sessionTimerText.textContent = '0:00';
+        }
         
         this.state.sessionTimerInterval = setInterval(() => {
             const elapsed = Date.now() - this.state.sessionStartTime;
             this.elements.sessionTimerText.textContent = this.formatDuration(elapsed);
         }, 1000);
+        
+        this.startRobuxTimer();
     },
 
     stopSessionTimer() {
@@ -286,6 +400,7 @@ const App = {
             clearInterval(this.state.sessionTimerInterval);
             this.state.sessionTimerInterval = null;
         }
+        this.stopRobuxTimer();
     },
 
     startIdleDetection() {
@@ -320,7 +435,7 @@ const App = {
         this.stopSessionTimer();
         alert('Session paused due to inactivity. Click OK to continue.');
         this.state.lastActivityTime = Date.now();
-        this.startSessionTimer();
+        this.startSessionTimer(true); // Preserve the session time
     },
 
     setInputMethod() {
@@ -405,6 +520,25 @@ const App = {
         this.elements.prompt.textContent = question.prompt;
         this.elements.hint.style.display = 'none';
         
+        if (this.state.currentLevel >= 4 && levelConfig.hands.includes('minute')) {
+            this.elements.reminder.style.display = 'block';
+        } else {
+            this.elements.reminder.style.display = 'none';
+        }
+        
+        if (levelConfig.show24Hour) {
+            this.elements.timeDisplayContainer.style.display = 'flex';
+            const time12 = `${question.hour}:${question.minute.toString().padStart(2, '0')} ${question.isPM ? 'PM' : 'AM'}`;
+            const time24 = Levels.format24HourTime(
+                question.correctAnswer.hour24, 
+                question.correctAnswer.minute24
+            );
+            this.elements.timeDisplay12.textContent = time12;
+            this.elements.timeDisplay24.textContent = '??:??';
+        } else {
+            this.elements.timeDisplayContainer.style.display = 'none';
+        }
+        
         Audio.speakPrompt(question.prompt);
         
         this.resetInputs();
@@ -419,10 +553,16 @@ const App = {
     resetInputs() {
         const levelConfig = Levels.getLevel(this.state.currentLevel);
         const hourOnly = !levelConfig.hands.includes('minute');
+        const is24Hour = levelConfig.show24Hour;
         
         this.elements.inputHour.value = '';
-        this.elements.inputHour.placeholder = hourOnly ? 'Hour' : 'HH';
+        if (is24Hour) {
+            this.elements.inputHour.placeholder = hourOnly ? '0-23' : 'HH (0-23)';
+        } else {
+            this.elements.inputHour.placeholder = hourOnly ? 'Hour' : 'HH';
+        }
         this.elements.inputMinute.value = hourOnly ? '0' : '';
+        this.elements.inputMinute.placeholder = 'MM';
         this.state.selectedHour = null;
         this.state.selectedMinute = hourOnly ? 0 : null;
         this.elements.hourButtons.querySelectorAll('.selector-btn').forEach(b => b.classList.remove('selected'));
@@ -490,14 +630,25 @@ const App = {
     },
 
     submitTextAnswer() {
+        if (this.state.isProcessing) return;
+        
         const hour = parseInt(this.elements.inputHour.value, 10);
         const levelConfig = Levels.getLevel(this.state.currentLevel);
         const hourOnly = !levelConfig.hands.includes('minute');
+        const is24Hour = levelConfig.show24Hour;
         
-        if (isNaN(hour) || hour < 1 || hour > 12) {
-            this.showInputError('Enter a valid hour (1-12)');
-            this.elements.inputHour.focus();
-            return;
+        if (is24Hour) {
+            if (isNaN(hour) || hour < 0 || hour > 23) {
+                this.showInputError('Enter a valid hour (0-23 for 24-hour time)');
+                this.elements.inputHour.focus();
+                return;
+            }
+        } else {
+            if (isNaN(hour) || hour < 1 || hour > 12) {
+                this.showInputError('Enter a valid hour (1-12)');
+                this.elements.inputHour.focus();
+                return;
+            }
         }
         
         if (hourOnly) {
@@ -539,6 +690,8 @@ const App = {
     },
 
     submitVisualAnswer() {
+        if (this.state.isProcessing) return;
+        
         const levelConfig = Levels.getLevel(this.state.currentLevel);
         const hourOnly = !levelConfig.hands.includes('minute');
         
@@ -558,6 +711,8 @@ const App = {
     },
 
     submitMultipleChoice(choice, btn) {
+        if (this.state.isProcessing) return;
+        
         this.elements.multipleChoiceGrid.querySelectorAll('.choice-btn').forEach(b => {
             b.disabled = true;
         });
@@ -583,40 +738,55 @@ const App = {
 
     processAnswer(hour, minute, timedOut = false) {
         this.stopTimer();
+        this.state.isProcessing = true;
         
         const question = this.state.currentQuestion;
         const correct = question.correctAnswer;
-        const isCorrect = !timedOut && hour === correct.hour && minute === correct.minute;
+        const levelConfig = Levels.getLevel(this.state.currentLevel);
+        
+        let isCorrect;
+        if (levelConfig.show24Hour && correct.hour24 !== undefined) {
+            isCorrect = !timedOut && hour === correct.hour24 && minute === correct.minute24;
+        } else {
+            isCorrect = !timedOut && hour === correct.hour && minute === correct.minute;
+        }
+        
+        this.state.lastAnswerCorrect = isCorrect;
         
         const responseTime = Date.now() - this.state.questionStartTime;
         
-        this.state.session.answers.push({
-            question: { hour: question.hour, minute: question.minute },
-            answer: timedOut ? null : { hour, minute },
-            correct: isCorrect,
-            responseTime,
-            timedOut,
-            hintsUsed: this.state.hintsUsed
-        });
-        
         if (isCorrect) {
+            this.state.session.answers.push({
+                question: { hour: question.hour, minute: question.minute },
+                answer: timedOut ? null : { hour, minute },
+                correct: isCorrect,
+                responseTime,
+                timedOut,
+                hintsUsed: this.state.hintsUsed
+            });
+            
             this.state.session.currentStreak++;
             if (this.state.session.currentStreak > this.state.session.bestStreak) {
                 this.state.session.bestStreak = this.state.session.currentStreak;
             }
+            Storage.updateErrorPattern(this.state.currentLevel, question.handCombination, isCorrect);
         } else {
             this.state.session.currentStreak = 0;
         }
         
-        const levelConfig = Levels.getLevel(this.state.currentLevel);
-        Storage.updateErrorPattern(this.state.currentLevel, question.handCombination, isCorrect);
-        
         this.showFeedback(isCorrect, question, timedOut);
     },
 
-    async showFeedback(isCorrect, question, timedOut) {
+    showFeedback(isCorrect, question, timedOut) {
         const levelConfig = Levels.getLevel(this.state.currentLevel);
-        const explanation = Levels.getExplanation(question, null, isCorrect, levelConfig);
+        const correct = question.correctAnswer;
+        
+        let correctTimeStr;
+        if (levelConfig.show24Hour && correct.hour24 !== undefined) {
+            correctTimeStr = `${correct.hour24}:${String(correct.minute24).padStart(2, '0')}`;
+        } else {
+            correctTimeStr = `${correct.hour}:${String(correct.minute).padStart(2, '0')}`;
+        }
         
         this.elements.feedbackIcon.innerHTML = isCorrect 
             ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>'
@@ -628,15 +798,21 @@ const App = {
             ? ['Correct!', 'Great job!', 'Well done!', 'That\'s right!', 'Excellent!']
             : timedOut 
                 ? ['Time\'s up!', 'Out of time!']
-                : ['Not quite.', 'Let\'s try again.', 'Almost!'];
+                : ['Not quite.', 'Try again!'];
         
         this.elements.feedbackMessage.textContent = messages[Math.floor(Math.random() * messages.length)];
         this.elements.feedbackMessage.className = 'feedback-message ' + (isCorrect ? 'correct' : 'incorrect');
-        this.elements.feedbackExplanation.textContent = explanation;
         
-        Audio.speakFeedback(isCorrect, explanation);
+        if (isCorrect) {
+            this.elements.feedbackExplanation.innerHTML = Levels.getExplanation(question, null, isCorrect, levelConfig);
+        } else {
+            this.elements.feedbackExplanation.innerHTML = `The correct answer is <strong style="color: var(--color-primary); font-size: 1.2em;">${correctTimeStr}</strong>`;
+        }
+        
+        Audio.speakFeedback(isCorrect, isCorrect ? '' : `The correct answer is ${correctTimeStr}`);
         
         this.elements.feedbackOverlay.classList.add('active');
+        this.state.modalShownTime = Date.now();
         
         if (isCorrect) {
             this.state.consecutiveCorrect++;
@@ -644,27 +820,63 @@ const App = {
                 MemeReward.show();
                 this.state.consecutiveCorrect = 0;
             }
+            
+            const levelConfig = Levels.getLevel(this.state.currentLevel);
+            const answeredCount = this.state.session.answers.length;
+            
+            this.elements.questionsDone.textContent = answeredCount;
+            this.elements.progressFill.style.width = `${(answeredCount / levelConfig.questionsRequired) * 100}%`;
+            
+            if (answeredCount >= levelConfig.questionsRequired) {
+                setTimeout(() => {
+                    this.dismissModal();
+                    this.completeLevelSession();
+                }, 1500);
+            } else {
+                this.checkBreakTime();
+                this.generateQuestion();
+                setTimeout(() => {
+                    this.dismissModal();
+                }, 1500);
+            }
         } else {
             this.state.consecutiveCorrect = 0;
+            setTimeout(() => {
+                this.dismissModal();
+            }, 1500);
         }
     },
 
-    nextQuestion() {
+    dismissModal() {
         this.elements.feedbackOverlay.classList.remove('active');
         MemeReward.hide();
+        this.state.isProcessing = false;
         
-        const levelConfig = Levels.getLevel(this.state.currentLevel);
-        const answeredCount = this.state.session.answers.length;
-        
-        this.elements.questionsDone.textContent = answeredCount;
-        this.elements.progressFill.style.width = `${(answeredCount / levelConfig.questionsRequired) * 100}%`;
-        
-        if (answeredCount >= levelConfig.questionsRequired) {
-            this.completeLevelSession();
-        } else {
-            this.checkBreakTime();
-            this.generateQuestion();
+        const settings = Storage.getSettings();
+        if (settings.inputMethod === 'text' && this.elements.inputHour) {
+            this.elements.inputHour.focus();
         }
+    },
+    
+    nextQuestion() {
+        if (!this.state.lastAnswerCorrect) {
+            this.resetInputs();
+        }
+        this.dismissModal();
+    },
+    
+    resetInputs() {
+        this.elements.inputHour.value = '';
+        this.elements.inputMinute.value = '';
+        this.state.selectedHour = null;
+        this.state.selectedMinute = null;
+        document.querySelectorAll('.hour-btn, .minute-btn').forEach(btn => {
+            btn.classList.remove('selected');
+        });
+        this.elements.multipleChoiceGrid.querySelectorAll('.choice-btn').forEach(btn => {
+            btn.disabled = false;
+            btn.classList.remove('correct', 'incorrect');
+        });
     },
 
     checkBreakTime() {
@@ -738,24 +950,24 @@ const App = {
             }
             Storage.saveProgress(progress);
         }
-        this.startSession();
+        this.startSession(true);
     },
 
     repeatLevel() {
-        this.startSession();
+        this.startSession(true);
     },
 
     goToPrevLevel() {
         if (this.state.currentLevel > 1) {
             this.state.currentLevel--;
-            this.startSession();
+            this.startSession(true);
         }
     },
 
     goToNextLevel() {
         if (this.state.currentLevel < 12) {
             this.state.currentLevel++;
-            this.startSession();
+            this.startSession(true);
         }
     },
 
@@ -930,6 +1142,20 @@ const App = {
         this.stopSessionTimer();
         this.stopIdleDetection();
         this.showScreen('welcome');
+    },
+    
+    goHome() {
+        if (this.state.session && this.state.session.answers.length > 0) {
+            if (!confirm('Return to home? Your current level progress will be saved.')) {
+                return;
+            }
+            const progress = Storage.getProgress();
+            progress.currentLevel = this.state.currentLevel;
+            progress.lastPlayed = new Date().toISOString();
+            Storage.saveProgress(progress);
+        }
+        this.endSession();
+        this.checkContinue();
     },
 
     formatDuration(ms) {
