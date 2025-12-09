@@ -1,7 +1,7 @@
 const Header = ({ onSettings, onDashboard }) => {
     return (
         <header className="header">
-            <h1 className="logo">ClockWise</h1>
+            <h1 className="logo">MultiplyMaster</h1>
             <nav className="nav">
                 <button 
                     className="nav-btn" 

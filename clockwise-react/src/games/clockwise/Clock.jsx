@@ -1,4 +1,4 @@
-import { handColors } from '../utils/clock';
+import { handColors } from '../../utils/clock';
 
 const Clock = ({ 
     hands = [], 

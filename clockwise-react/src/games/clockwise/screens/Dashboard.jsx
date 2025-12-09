@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import * as Storage from '../../utils/storage';
-import { generateProgressReport } from '../../utils/adaptive';
-import { getLevel } from '../../utils/levels';
+import * as Storage from '../../../utils/storage';
+import { generateProgressReport } from '../../../utils/adaptive';
+import { getLevel } from '../../../utils/levels';
 
 const Dashboard = ({ onBack, formatDuration, onExport, onReset }) => {
     const [report, setReport] = useState(null);

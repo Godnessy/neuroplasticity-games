@@ -225,7 +225,12 @@ export const useGameState = () => {
         const levelConfig = Levels.getLevel(state.currentLevel);
         
         let isCorrect;
-        if (levelConfig.show24Hour && correct.hour24 !== undefined) {
+        // Check if this question asked for 24-hour format
+        const shouldUse24Hour = correct.askFor24Hour !== undefined 
+            ? correct.askFor24Hour 
+            : (levelConfig.show24Hour && correct.hour24 !== undefined);
+        
+        if (shouldUse24Hour) {
             isCorrect = !timedOut && hour === correct.hour24 && minute === correct.minute24;
         } else {
             isCorrect = !timedOut && hour === correct.hour && minute === correct.minute;
@@ -271,10 +276,11 @@ export const useGameState = () => {
         }
         
         let correctTimeStr;
-        if (levelConfig.show24Hour && correct.hour24 !== undefined) {
+        if (shouldUse24Hour) {
             correctTimeStr = `${correct.hour24}:${String(correct.minute24).padStart(2, '0')}`;
         } else {
-            correctTimeStr = `${correct.hour}:${String(correct.minute).padStart(2, '0')}`;
+            const ampm = correct.isPM ? 'PM' : 'AM';
+            correctTimeStr = `${correct.hour}:${String(correct.minute).padStart(2, '0')} ${ampm}`;
         }
         
         const explanation = isCorrect 
@@ -354,15 +360,25 @@ export const useGameState = () => {
 
     const goToPrevLevel = useCallback(() => {
         if (state.currentLevel > 1) {
-            startSession(state.currentLevel - 1);
+            const newLevel = state.currentLevel - 1;
+            dispatch({ type: 'SET_LEVEL', payload: newLevel });
+            dispatch({ type: 'UPDATE_SESSION', payload: { level: newLevel } });
+            const levelConfig = Levels.getLevel(newLevel);
+            const question = Levels.generateQuestion(levelConfig);
+            dispatch({ type: 'SET_QUESTION', payload: question });
         }
-    }, [state.currentLevel, startSession]);
+    }, [state.currentLevel]);
 
     const goToNextLevel = useCallback(() => {
-        if (state.currentLevel < 12) {
-            startSession(state.currentLevel + 1);
+        if (state.currentLevel < 14) {
+            const newLevel = state.currentLevel + 1;
+            dispatch({ type: 'SET_LEVEL', payload: newLevel });
+            dispatch({ type: 'UPDATE_SESSION', payload: { level: newLevel } });
+            const levelConfig = Levels.getLevel(newLevel);
+            const question = Levels.generateQuestion(levelConfig);
+            dispatch({ type: 'SET_QUESTION', payload: question });
         }
-    }, [state.currentLevel, startSession]);
+    }, [state.currentLevel]);
 
     const endSession = useCallback(() => {
         if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);

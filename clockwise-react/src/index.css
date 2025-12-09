@@ -224,25 +224,8 @@ body {
 
 .welcome-robux {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 0.5rem;
     margin-bottom: 1.5rem;
-    padding: 0.75rem 1.25rem;
-    background: linear-gradient(135deg, #ffd700 0%, #ffb347 100%);
-    border-radius: 25px;
-    box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
-}
-
-.welcome-robux .robux-icon {
-    width: 28px;
-    height: 28px;
-}
-
-.welcome-robux .robux-count {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #333;
 }
 
 .btn-reset-robux {
@@ -1685,5 +1668,452 @@ body {
     
     :root {
         --clock-size: 250px;
+    }
+}
+
+/* AM/PM Indicator for 24-hour levels */
+.ampm-indicator {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.75rem;
+}
+
+.ampm-badge {
+    display: inline-block;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.ampm-badge.am {
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    color: #c44536;
+}
+
+.ampm-badge.pm {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* ============================================
+   HOME SCREEN STYLES
+   ============================================ */
+
+.home {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+    color: #fff;
+}
+
+.home-header {
+    padding: 1.5rem 2rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, transparent 100%);
+}
+
+.home-header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.logo-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.home .logo {
+    font-size: 2rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #8B6CB8, #e94560);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.logo-icon {
+    font-size: 2.5rem;
+    -webkit-text-fill-color: initial;
+}
+
+.tagline {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+}
+
+.home-main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.hero {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.hero h2 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, #fff, #8B6CB8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero p {
+    color: rgba(255,255,255,0.7);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto 2rem;
+}
+
+.hero-characters {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.hero-char {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    animation: bounce 2s infinite ease-in-out;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.hero-char:nth-child(1) { animation-delay: 0s; }
+.hero-char:nth-child(2) { animation-delay: 0.2s; }
+.hero-char:nth-child(3) { animation-delay: 0.4s; }
+.hero-char:nth-child(4) { animation-delay: 0.6s; }
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.game-card {
+    display: block;
+    background: #16213e;
+    border-radius: 16px;
+    padding: 2rem;
+    text-decoration: none;
+    color: inherit;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 2px solid transparent;
+}
+
+.game-card:hover {
+    transform: translateY(-5px);
+    border-color: #6B4C9A;
+    box-shadow: 0 0 30px rgba(107,76,154,0.3);
+}
+
+.game-card.clockwise {
+    background: linear-gradient(135deg, #16213e 0%, rgba(45,90,123,0.3) 100%);
+}
+
+.game-card.multiply {
+    background: linear-gradient(135deg, #16213e 0%, rgba(107,76,154,0.3) 100%);
+}
+
+.game-card-icon {
+    color: #8B6CB8;
+    margin-bottom: 1rem;
+}
+
+.game-card-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.game-card-content p {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.game-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.game-meta span {
+    background: rgba(255,255,255,0.1);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.game-card-character {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    opacity: 0.3;
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.game-card:hover .game-card-character {
+    opacity: 0.6;
+    transform: scale(1.1);
+}
+
+.game-card-character img {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+}
+
+.play-btn {
+    display: inline-block;
+    background: linear-gradient(135deg, #6B4C9A, #e94560);
+    color: white;
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    font-weight: 600;
+}
+
+.info-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.info-card {
+    background: #16213e;
+    border-radius: 16px;
+    padding: 1.5rem;
+}
+
+.info-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+    color: #ffd700;
+}
+
+.info-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.info-card li {
+    padding: 0.5rem 0;
+    color: rgba(255,255,255,0.7);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.info-card li:last-child {
+    border-bottom: none;
+}
+
+.info-card li strong {
+    color: #fff;
+}
+
+.info-card p {
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 0.75rem;
+}
+
+.home-footer {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255,255,255,0.5);
+}
+
+/* Multiply game specific styles */
+.equation-display {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.equation {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.multiple-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    max-width: 300px;
+    margin: 0 auto 1.5rem;
+}
+
+.choice-btn {
+    padding: 1.5rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+    background: var(--color-bg);
+    border: 2px solid var(--color-primary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+}
+
+.choice-btn:hover:not(:disabled) {
+    background: var(--color-primary);
+    color: white;
+    transform: scale(1.05);
+}
+
+.choice-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Multiplication Table */
+.multiplication-table-container {
+    background: var(--color-surface);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-soft);
+}
+
+.multiplication-table-container h3 {
+    text-align: center;
+    color: var(--color-primary);
+    margin: 0 0 0.75rem 0;
+    font-size: 1rem;
+}
+
+.multiplication-table {
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    width: 100%;
+}
+
+.multiplication-table th,
+.multiplication-table td {
+    width: 28px;
+    height: 28px;
+    text-align: center;
+    border: 1px solid var(--color-bg);
+    padding: 2px;
+}
+
+.multiplication-table th {
+    background: var(--color-primary);
+    color: white;
+    font-weight: 600;
+}
+
+.multiplication-table td {
+    background: var(--color-surface);
+    color: var(--color-text);
+}
+
+.multiplication-table td.dim-highlight {
+    background: rgba(45, 90, 123, 0.1);
+}
+
+.multiplication-table td.highlight {
+    background: var(--color-primary);
+    color: white;
+    font-weight: 700;
+    animation: pulse 1s infinite;
+}
+
+/* Visual Multiplication */
+.visual-multiplication {
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.groups-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.group {
+    border: 2px solid;
+    border-radius: 8px;
+    padding: 0.5rem;
+    text-align: center;
+    background: var(--color-surface);
+}
+
+.group-dots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    max-width: 60px;
+    margin-bottom: 0.25rem;
+}
+
+.visual-multiplication .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+}
+
+.group-count {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.visual-label {
+    text-align: center;
+    font-size: 1rem;
+    color: var(--color-text);
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .home-header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .home .logo {
+        font-size: 1.5rem;
+        justify-content: center;
+    }
+    
+    .hero h2 {
+        font-size: 1.75rem;
+    }
+    
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .hero-char {
+        width: 45px;
+        height: 45px;
+    }
+    
+    .multiplication-legend {
+        min-width: unset;
     }
 }

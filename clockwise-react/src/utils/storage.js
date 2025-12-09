@@ -3,8 +3,8 @@ const KEYS = {
     PROGRESS: 'clockwise_progress',
     SESSIONS: 'clockwise_sessions',
     CURRENT_SESSION: 'clockwise_current_session',
-    ROBUX_COUNT: 'clockwise_robux_count',
-    ROBUX_LAST_UPDATE: 'clockwise_robux_last_update'
+    ROBUX_COUNT: 'neuroplasticity_robux_count', // Shared across all games
+    ROBUX_LAST_UPDATE: 'neuroplasticity_robux_last_update'
 };
 
 const defaultSettings = {

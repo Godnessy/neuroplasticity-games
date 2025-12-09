@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import Clock from '../Clock';
-import RobuxCounter from '../RobuxCounter';
-import FeedbackModal from '../FeedbackModal';
+import RobuxCounter from '../../../components/shared/RobuxCounter';
+import FeedbackModal from '../../../components/shared/FeedbackModal';
 import TimeLegend from '../TimeLegend';
-import { getLevel, getHint, generateChoices } from '../../utils/levels';
-import { CLOCK_CENTER_IMAGES } from '../../utils/config';
+import { getLevel, getHint, generateChoices } from '../../../utils/levels';
+import { CLOCK_CENTER_IMAGES } from '../../../utils/config';
 
 const Game = ({
     currentLevel,
@@ -58,9 +58,12 @@ const Game = ({
         
         const hour = parseInt(hourInputRef.current?.value, 10);
         const hourOnly = !levelConfig.hands.includes('minute');
-        const is24Hour = levelConfig.show24Hour;
+        // Check if THIS question asks for 24-hour format (not just the level)
+        const askFor24Hour = currentQuestion?.correctAnswer?.askFor24Hour !== undefined 
+            ? currentQuestion.correctAnswer.askFor24Hour 
+            : levelConfig.show24Hour;
         
-        if (is24Hour) {
+        if (askFor24Hour) {
             if (isNaN(hour) || hour < 0 || hour > 23) {
                 setInputError('Enter a valid hour (0-23 for 24-hour time)');
                 hourInputRef.current?.focus();
@@ -68,7 +71,7 @@ const Game = ({
             }
         } else {
             if (isNaN(hour) || hour < 1 || hour > 12) {
-                setInputError('Enter a valid hour (1-12)');
+                setInputError('Enter a valid hour (1-12 for 12-hour time)');
                 hourInputRef.current?.focus();
                 return;
             }
@@ -302,6 +305,13 @@ const Game = ({
                                 centerImage={centerImage}
                             />
                         </div>
+                        {levelConfig.show24Hour && currentQuestion?.isPM !== undefined && (
+                            <div className="ampm-indicator">
+                                <span className={`ampm-badge ${currentQuestion.isPM ? 'pm' : 'am'}`}>
+                                    {currentQuestion.isPM ? 'PM' : 'AM'}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     <div className="prompt-container">

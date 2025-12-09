@@ -1,0 +1,9 @@
+{
+    "name": "Neuroplasticity Games",
+    "short_name": "BrainGames",
+    "description": "Educational games for children with learning difficulties",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#1a1a2e",
+    "theme_color": "#6B4C9A"
+}

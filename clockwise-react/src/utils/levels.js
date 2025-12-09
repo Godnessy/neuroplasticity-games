@@ -210,7 +210,55 @@ export const levelsConfig = [
     },
     {
         id: 10,
-        name: 'Real-World 24-Hour Applications',
+        name: 'Any Minute - 12/24 Hour',
+        description: 'Practice with any minute value in both formats',
+        research: 'Incremental complexity: master any minute before removing numbers',
+        hands: ['hour', 'minute'],
+        timeAllowed: null,
+        showNumbers: true,
+        minuteOptions: 'any',
+        hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        show24Hour: true,
+        mixedFormat: true,
+        questionsRequired: 15,
+        hints: [
+            'The minute hand points between numbers - count the small marks.',
+            'Each small mark is 1 minute.',
+            'Remember to convert to the requested format.'
+        ],
+        mediatedPrompts: [
+            'You can now read any minute on the clock!',
+            'Precise time reading is a valuable skill.',
+            'Your brain is getting faster at this!'
+        ]
+    },
+    {
+        id: 11,
+        name: 'No Numbers - 24-Hour',
+        description: 'Read the clock without number guides',
+        research: 'Feuerstein: Removing scaffolding builds independence',
+        hands: ['hour', 'minute'],
+        timeAllowed: null,
+        showNumbers: false,
+        minuteOptions: 'any',
+        hourOptions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        show24Hour: true,
+        mixedFormat: true,
+        questionsRequired: 15,
+        hints: [
+            'Imagine where the numbers would be.',
+            'The hour hand is shorter and thicker.',
+            'Count the tick marks for minutes.'
+        ],
+        mediatedPrompts: [
+            'You don\'t need the numbers anymore!',
+            'Your brain has internalized the clock positions.',
+            'This is how experts read clocks!'
+        ]
+    },
+    {
+        id: 12,
+        name: 'Real-World Applications',
         description: 'Practice with schedules and timetables',
         research: 'Feuerstein: Bridging to real-world application',
         hands: ['hour', 'minute'],
@@ -233,7 +281,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 11,
+        id: 13,
         name: 'Time Calculations in 24-Hour',
         description: 'Add and subtract time in 24-hour format',
         research: 'Merzenich: Complex cognitive operations at mastery level',
@@ -257,7 +305,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 12,
+        id: 14,
         name: '24-Hour Time Master',
         description: 'Master all 24-hour time skills',
         research: 'Integration: Full neuroplastic adaptation achieved',
@@ -281,6 +329,8 @@ export const levelsConfig = [
         ]
     }
 ];
+
+export const MAX_LEVEL = 14;
 
 export const getLevel = (levelId) => {
     return levelsConfig.find(l => l.id === levelId) || levelsConfig[0];
@@ -361,6 +411,7 @@ export const generateQuestion = (levelConfig) => {
     let questionType = 'standard';
     let elapsedMinutes = 0;
     let isPM = false;
+    let askFor24Hour = true;
     
     if (levelConfig.show24Hour) {
         if (levelConfig.pmOnly) {
@@ -402,8 +453,8 @@ export const generateQuestion = (levelConfig) => {
             const context = randomFrom(contexts);
             prompt = `${context} this time. What is it in 24-hour format?`;
         } else if (levelConfig.mixedFormat) {
-            const askFor24 = Math.random() > 0.5;
-            prompt = askFor24 
+            askFor24Hour = Math.random() > 0.5;
+            prompt = askFor24Hour 
                 ? 'What is this time in 24-hour format?'
                 : 'What is this time in 12-hour format (with AM/PM)?';
         } else {
@@ -415,7 +466,8 @@ export const generateQuestion = (levelConfig) => {
             minute: minute,
             hour24: time24.hour,
             minute24: time24.minute,
-            isPM: isPM
+            isPM: isPM,
+            askFor24Hour: askFor24Hour
         };
     } else if (questionType === 'elapsed') {
         prompt = `The clock shows the current time. What time will it be in ${elapsedMinutes} minutes?`;
@@ -501,16 +553,24 @@ export const getMediatedPrompt = (levelConfig) => {
 export const getExplanation = (question, userAnswer, isCorrect, levelConfig = null) => {
     const correct = question.correctAnswer;
     const hourOnly = levelConfig ? !levelConfig.hands.includes('minute') : (correct.minute === 0 && question.hands && question.hands.length === 1);
-    const is24Hour = levelConfig && levelConfig.show24Hour;
+    const askFor24Hour = correct.askFor24Hour !== undefined ? correct.askFor24Hour : (levelConfig && levelConfig.show24Hour);
     
-    if (is24Hour) {
+    if (levelConfig && levelConfig.show24Hour) {
         const time12 = `${correct.hour}:${correct.minute.toString().padStart(2, '0')} ${correct.isPM ? 'PM' : 'AM'}`;
         const time24 = format24HourTime(correct.hour24, correct.minute24);
         
         if (isCorrect) {
-            return `Yes! ${time12} = ${time24} in 24-hour format.`;
+            if (askFor24Hour) {
+                return `Yes! ${time12} = ${time24} in 24-hour format.`;
+            } else {
+                return `Correct! The time is ${time12}.`;
+            }
         } else {
-            return `The correct answer is ${time24} (${time12}).`;
+            if (askFor24Hour) {
+                return `The correct answer is ${time24} (${time12}).`;
+            } else {
+                return `The correct answer is ${time12}.`;
+            }
         }
     } else if (hourOnly) {
         if (isCorrect) {

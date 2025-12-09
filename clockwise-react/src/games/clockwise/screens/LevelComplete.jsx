@@ -1,5 +1,5 @@
-import { getLevel, getMediatedPrompt } from '../../utils/levels';
-import { calculateSessionAccuracy, getRecommendedAction } from '../../utils/adaptive';
+import { getLevel, getMediatedPrompt } from '../../../utils/levels';
+import { calculateSessionAccuracy, getRecommendedAction } from '../../../utils/adaptive';
 
 const LevelComplete = ({ 
     session, 
