@@ -5,38 +5,17 @@
  */
 
 export const levelsConfig = [
-    // PHASE 1: Foundation - Understanding what multiplication means
+    // PHASE 1: Foundation - Key facts (2x, 10x, 5x)
     {
         id: 1,
-        name: 'What is Multiplication?',
-        description: 'Learn that multiplication is repeated addition',
-        research: 'Arrowsmith: Build foundational symbol relations before complexity',
-        table: 2,
-        range: [1, 5],
-        showVisual: true,
-        showGroups: true,
-        questionsRequired: 15,
-        hints: [
-            '2 × 3 means "2 groups of 3" or "3 + 3"',
-            'Count the dots in each group',
-            'Multiplication is just fast adding!'
-        ],
-        mediatedPrompts: [
-            'You\'re learning that × means "groups of"!',
-            'See how the dots are arranged in groups?',
-            'Your brain is building new number connections!'
-        ]
-    },
-    {
-        id: 2,
         name: 'Doubles (×2)',
         description: 'Master the 2 times table - doubling numbers',
-        research: 'Merzenich: Master at current level before adding complexity',
+        research: 'Dyscalculia research: 2x is a key fact for deriving others',
         table: 2,
         range: [1, 10],
         showVisual: true,
-        showGroups: false,
-        questionsRequired: 20,
+        showGroups: true,
+        questionsRequired: 15,
         hints: [
             '×2 means double the number',
             'Think: the number + itself',
@@ -49,7 +28,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 3,
+        id: 2,
         name: 'Tens (×10)',
         description: 'The easiest table - just add a zero!',
         research: 'Dyscalculia research: 10x is a key fact for deriving others',
@@ -70,7 +49,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 4,
+        id: 3,
         name: 'Fives (×5)',
         description: 'Half of tens - ends in 0 or 5',
         research: 'Dyscalculia research: 5x is half of 10x - derive from known facts',
@@ -92,7 +71,7 @@ export const levelsConfig = [
     },
     // PHASE 2: Deriving from key facts
     {
-        id: 5,
+        id: 4,
         name: 'Threes (×3)',
         description: 'Double plus one more group',
         research: 'Tallal: Build on existing knowledge',
@@ -113,7 +92,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 6,
+        id: 5,
         name: 'Fours (×4)',
         description: 'Double the double!',
         research: 'Arrowsmith: Symbol relations - connecting concepts',
@@ -134,7 +113,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 7,
+        id: 6,
         name: 'Sixes (×6)',
         description: 'Five plus one more, or double threes',
         research: 'Multiple derivation paths for flexibility',
@@ -155,7 +134,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 8,
+        id: 7,
         name: 'Sevens (×7)',
         description: 'Five plus two more groups',
         research: 'Feuerstein: Mediated learning - guide the thinking process',
@@ -176,7 +155,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 9,
+        id: 8,
         name: 'Eights (×8)',
         description: 'Double, double, double!',
         research: 'Pattern recognition strengthens neural pathways',
@@ -197,7 +176,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 10,
+        id: 9,
         name: 'Nines (×9)',
         description: 'Ten minus one - the finger trick!',
         research: 'Multi-sensory approaches aid retention',
@@ -220,7 +199,7 @@ export const levelsConfig = [
     },
     // PHASE 3: Mixed practice and fluency
     {
-        id: 11,
+        id: 10,
         name: 'Mixed Practice - Easy',
         description: 'Practice 2s, 5s, and 10s together',
         research: 'Interleaved practice strengthens retrieval',
@@ -240,7 +219,7 @@ export const levelsConfig = [
         ]
     },
     {
-        id: 12,
+        id: 11,
         name: 'Mixed Practice - All Tables',
         description: 'All tables 2-10 mixed together',
         research: 'Fluency through varied practice',
@@ -266,22 +245,48 @@ export const getLevel = (levelId) => {
     return levelsConfig.find(l => l.id === levelId) || levelsConfig[0];
 };
 
+// Track recent questions to avoid repeats
+let recentQuestions = [];
+const MAX_RECENT = 5;
+
 export const generateQuestion = (levelConfig) => {
     let a, b;
+    let attempts = 0;
+    const maxAttempts = 20;
     
-    if (levelConfig.mixed && levelConfig.tables) {
-        // Pick random table from the allowed tables
-        const table = levelConfig.tables[Math.floor(Math.random() * levelConfig.tables.length)];
-        a = table;
-        b = Math.floor(Math.random() * (levelConfig.range[1] - levelConfig.range[0] + 1)) + levelConfig.range[0];
-    } else {
-        a = levelConfig.table;
-        b = Math.floor(Math.random() * (levelConfig.range[1] - levelConfig.range[0] + 1)) + levelConfig.range[0];
-    }
+    do {
+        attempts++;
+        
+        if (levelConfig.mixed && levelConfig.tables) {
+            // Pick random table from the allowed tables
+            const table = levelConfig.tables[Math.floor(Math.random() * levelConfig.tables.length)];
+            a = table;
+            b = Math.floor(Math.random() * (levelConfig.range[1] - levelConfig.range[0] + 1)) + levelConfig.range[0];
+        } else {
+            a = levelConfig.table;
+            b = Math.floor(Math.random() * (levelConfig.range[1] - levelConfig.range[0] + 1)) + levelConfig.range[0];
+        }
+        
+        // Randomly swap a and b for variety
+        if (Math.random() > 0.5) {
+            [a, b] = [b, a];
+        }
+        
+        // Check if this question was asked recently (check both orderings)
+        const key1 = `${a}x${b}`;
+        const key2 = `${b}x${a}`;
+        const isRecent = recentQuestions.includes(key1) || recentQuestions.includes(key2);
+        
+        if (!isRecent || attempts >= maxAttempts) {
+            break;
+        }
+    } while (attempts < maxAttempts);
     
-    // Randomly swap a and b for variety
-    if (Math.random() > 0.5) {
-        [a, b] = [b, a];
+    // Track this question
+    const questionKey = `${a}x${b}`;
+    recentQuestions.push(questionKey);
+    if (recentQuestions.length > MAX_RECENT) {
+        recentQuestions.shift();
     }
     
     const correctAnswer = a * b;
@@ -298,6 +303,10 @@ export const generateQuestion = (levelConfig) => {
     };
 };
 
+export const resetRecentQuestions = () => {
+    recentQuestions = [];
+};
+
 export const getHint = (levelConfig, hintIndex) => {
     const hints = levelConfig.hints || [];
     return hints[Math.min(hintIndex, hints.length - 1)] || 'Think about what you know!';
@@ -310,16 +319,32 @@ export const getMediatedPrompt = (levelConfig) => {
 
 export const generateChoices = (correctAnswer, levelConfig) => {
     const choices = [correctAnswer];
-    const range = levelConfig.table ? levelConfig.table * 2 : 10;
+    const range = Math.max(levelConfig.table ? levelConfig.table * 2 : 10, 10);
     
-    while (choices.length < 4) {
-        // Generate plausible wrong answers
-        const offset = Math.floor(Math.random() * range) - range/2;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    while (choices.length < 4 && attempts < maxAttempts) {
+        attempts++;
+        // Generate plausible wrong answers - ensure offset is never 0
+        let offset = Math.floor(Math.random() * range) - range/2;
+        if (offset === 0) offset = Math.random() > 0.5 ? 1 : -1;
+        
         const wrongAnswer = correctAnswer + offset;
         
         if (wrongAnswer > 0 && wrongAnswer !== correctAnswer && !choices.includes(wrongAnswer)) {
             choices.push(wrongAnswer);
         }
+    }
+    
+    // Fallback: if we couldn't generate enough choices, add simple offsets
+    let fallbackOffset = 1;
+    while (choices.length < 4) {
+        const fallbackAnswer = correctAnswer + fallbackOffset;
+        if (!choices.includes(fallbackAnswer) && fallbackAnswer > 0) {
+            choices.push(fallbackAnswer);
+        }
+        fallbackOffset++;
     }
     
     // Shuffle

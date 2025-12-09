@@ -18,7 +18,7 @@ const initialState = {
     hintsUsed: 0,
     isProcessing: false,
     robuxCount: 0,
-    settings: { inputMethod: 'multiple', showTimer: true },
+    settings: { inputMethod: 'multiple', showTimer: true, questionsPerLevel: 10 },
     showFeedback: false,
     feedbackData: null
 };
@@ -52,6 +52,14 @@ function MultiplyGame() {
 
     useEffect(() => {
         dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
+        // Load saved settings
+        const savedSettings = Storage.getMultiplySettings();
+        dispatch({ type: 'SET_SETTINGS', payload: { ...state.settings, ...savedSettings } });
+        // Load saved progress
+        const savedProgress = Storage.getMultiplyProgress();
+        if (savedProgress.currentLevel) {
+            dispatch({ type: 'SET_LEVEL', payload: savedProgress.currentLevel });
+        }
         return () => {
             if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
         };
@@ -68,8 +76,9 @@ function MultiplyGame() {
         return () => clearInterval(timer);
     }, [state.sessionStartTime]);
 
-    const generateQuestion = useCallback(() => {
-        const levelConfig = Levels.getLevel(state.currentLevel);
+    const generateQuestion = useCallback((levelOverride = null) => {
+        const level = levelOverride !== null ? levelOverride : state.currentLevel;
+        const levelConfig = Levels.getLevel(level);
         const question = Levels.generateQuestion(levelConfig);
         const choices = Levels.generateChoices(question.correctAnswer, levelConfig);
         dispatch({ type: 'SET_QUESTION', payload: { question, choices } });
@@ -114,7 +123,7 @@ function MultiplyGame() {
     // Change level without resetting session timer
     const changeLevel = (newLevel) => {
         if (isChangingLevelRef.current) return; // Prevent rapid clicks
-        if (newLevel < 1 || newLevel > 12) return;
+        if (newLevel < 1 || newLevel > 11) return;
         
         isChangingLevelRef.current = true;
         
@@ -125,7 +134,10 @@ function MultiplyGame() {
         }
         
         dispatch({ type: 'SET_LEVEL', payload: newLevel });
+        // Reset answers for new level but keep session timer running
+        dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
         setHintText('');
+        Levels.resetRecentQuestions();
         
         const question = Levels.generateQuestion(levelConfig);
         const choices = Levels.generateChoices(question.correctAnswer, levelConfig);
@@ -142,8 +154,10 @@ function MultiplyGame() {
         dispatch({ type: 'SET_PROCESSING', payload: true });
 
         const isCorrect = answer === state.currentQuestion.correctAnswer;
-        const levelConfig = Levels.getLevel(state.currentLevel);
+        const questionsRequired = state.settings.questionsPerLevel;
         
+        // Only count correct answers toward progress
+        const correctCount = (state.session?.answers || []).filter(a => a.correct).length + (isCorrect ? 1 : 0);
         const newAnswers = [...(state.session?.answers || []), { correct: isCorrect }];
         const newStreak = isCorrect ? (state.session?.currentStreak || 0) + 1 : 0;
         const bestStreak = Math.max(state.session?.bestStreak || 0, newStreak);
@@ -153,23 +167,56 @@ function MultiplyGame() {
             duration: Date.now() - state.session.startTime
         }});
 
-        const explanation = Levels.getDerivationExplanation(
-            state.currentQuestion.a, state.currentQuestion.b, state.currentQuestion.derivationMethod
-        );
+        const qA = state.currentQuestion.a;
+        const qB = state.currentQuestion.b;
+        const result = qA * qB;
+        const explanation = isCorrect ? `${qA} × ${qB} = ${result}` : `The answer is ${qA} × ${qB} = ${result}`;
         dispatch({ type: 'SHOW_FEEDBACK', payload: { isCorrect, explanation }});
 
-        if (newAnswers.length >= levelConfig.questionsRequired) {
+        if (isCorrect) {
+            // Auto-dismiss after 1.5 seconds for correct answers
             setTimeout(() => {
-                if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
-                dispatch({ type: 'SET_SCREEN', payload: 'levelComplete' });
-            }, 100);
+                // Check if still showing feedback (user didn't already dismiss)
+                if (!state.showFeedback) return;
+                
+                dispatch({ type: 'HIDE_FEEDBACK' });
+                
+                if (correctCount >= questionsRequired) {
+                    // Auto-advance to next level, keep timer running
+                    const nextLevel = state.currentLevel < 11 ? state.currentLevel + 1 : state.currentLevel;
+                    Storage.saveMultiplyProgress({ currentLevel: nextLevel });
+                    dispatch({ type: 'SET_LEVEL', payload: nextLevel });
+                    // Reset answers for new level
+                    dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
+                    Levels.resetRecentQuestions();
+                    generateQuestion(nextLevel);
+                } else {
+                    generateQuestion();
+                }
+            }, 1500);
         }
-    }, [state.isProcessing, state.currentQuestion, state.session, state.currentLevel]);
+    }, [state.isProcessing, state.currentQuestion, state.session, state.settings.questionsPerLevel, state.currentLevel, state.showFeedback, generateQuestion]);
 
     const dismissFeedback = () => {
+        if (!state.showFeedback) return; // Already dismissed
+        
+        const wasCorrect = state.feedbackData?.isCorrect;
         dispatch({ type: 'HIDE_FEEDBACK' });
-        const levelConfig = Levels.getLevel(state.currentLevel);
-        if ((state.session?.answers?.length || 0) < levelConfig.questionsRequired) {
+        
+        if (!wasCorrect) return; // Keep same question for incorrect
+        
+        const correctCount = (state.session?.answers || []).filter(a => a.correct).length;
+        
+        if (correctCount >= state.settings.questionsPerLevel) {
+            // Advance to next level
+            const nextLevel = state.currentLevel < 11 ? state.currentLevel + 1 : state.currentLevel;
+            Storage.saveMultiplyProgress({ currentLevel: nextLevel });
+            dispatch({ type: 'SET_LEVEL', payload: nextLevel });
+            // Reset answers for new level
+            dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
+            Levels.resetRecentQuestions();
+            generateQuestion(nextLevel);
+        } else {
             generateQuestion();
         }
     };
@@ -178,13 +225,6 @@ function MultiplyGame() {
         const levelConfig = Levels.getLevel(state.currentLevel);
         dispatch({ type: 'INCREMENT_HINTS' });
         setHintText(Levels.getHint(levelConfig, state.hintsUsed));
-    };
-
-    const advanceLevel = () => {
-        const accuracy = state.session?.answers?.length > 0
-            ? state.session.answers.filter(a => a.correct).length / state.session.answers.length : 0;
-        const nextLevel = accuracy >= 0.75 && state.currentLevel < 12 ? state.currentLevel + 1 : state.currentLevel;
-        startSession(nextLevel);
     };
 
     const levelConfig = Levels.getLevel(state.currentLevel);
@@ -225,13 +265,19 @@ function MultiplyGame() {
                                         </button>
                                     )}
                                     <span className="level-badge">Level {state.currentLevel}</span>
-                                    {state.currentLevel < 12 && (
+                                    {state.currentLevel < 11 && (
                                         <button className="level-nav-btn" onClick={() => changeLevel(state.currentLevel + 1)}>
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                                         </button>
                                     )}
                                 </div>
                                 <span className="level-name">{levelConfig.name}</span>
+                            </div>
+                            <div className="progress-container">
+                                <div className="progress-bar">
+                                    <div className="progress-fill" style={{ width: `${(((state.session?.answers || []).filter(a => a.correct).length) / state.settings.questionsPerLevel) * 100}%` }}></div>
+                                </div>
+                                <span className="progress-text">{(state.session?.answers || []).filter(a => a.correct).length}/{state.settings.questionsPerLevel}</span>
                             </div>
                             <div className="session-timer">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
@@ -268,25 +314,70 @@ function MultiplyGame() {
                         <FeedbackModal show={state.showFeedback} data={state.feedbackData} onDismiss={dismissFeedback} />
                     </section>
                 );
-            case 'levelComplete': {
-                const accuracy = state.session?.answers?.length > 0
-                    ? Math.round((state.session.answers.filter(a => a.correct).length / state.session.answers.length) * 100) : 0;
+            case 'settings':
                 return (
-                    <section className="screen screen-level-complete active">
-                        <div className="level-complete-content">
-                            <h2>Level Complete!</h2>
-                            <div className="level-stats">
-                                <div className="stat"><span className="stat-value">{accuracy}%</span><span className="stat-label">Accuracy</span></div>
-                                <div className="stat"><span className="stat-value">{state.session?.bestStreak || 0}</span><span className="stat-label">Best Streak</span></div>
-                            </div>
-                            <button className="btn btn-primary btn-large" onClick={advanceLevel}>
-                                {accuracy >= 75 && state.currentLevel < 12 ? 'Next Level' : 'Try Again'}
+                    <section className="screen screen-settings active">
+                        <div className="dashboard-header">
+                            <button className="btn btn-back" onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'welcome' })}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                </svg>
+                                Back
                             </button>
-                            <button className="btn btn-secondary" onClick={() => navigate('/')}>Back to Games</button>
+                            <h2>Settings</h2>
+                        </div>
+                        <div className="dashboard-content">
+                            <div className="dashboard-overview">
+                                <div className="overview-card">
+                                    <h3>Questions per Level</h3>
+                                    <input 
+                                        type="number" 
+                                        min="1" 
+                                        max="30" 
+                                        value={state.settings.questionsPerLevel}
+                                        onChange={(e) => {
+                                            const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 10));
+                                            const newSettings = { ...state.settings, questionsPerLevel: val };
+                                            dispatch({ type: 'SET_SETTINGS', payload: newSettings });
+                                            Storage.saveMultiplySettings(newSettings);
+                                        }}
+                                        className="settings-number-input"
+                                    />
+                                </div>
+                            </div>
                         </div>
                     </section>
                 );
-            }
+            case 'dashboard':
+                return (
+                    <section className="screen screen-dashboard active">
+                        <div className="dashboard-header">
+                            <button className="btn btn-back" onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'welcome' })}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                </svg>
+                                Back
+                            </button>
+                            <h2>Progress Dashboard</h2>
+                        </div>
+                        <div className="dashboard-content">
+                            <div className="dashboard-overview">
+                                <div className="overview-card">
+                                    <h3>Current Level</h3>
+                                    <span className="overview-value">{state.currentLevel}</span>
+                                </div>
+                                <div className="overview-card">
+                                    <h3>Robux Earned</h3>
+                                    <span className="overview-value">{state.robuxCount}</span>
+                                </div>
+                                <div className="overview-card">
+                                    <h3>Questions per Level</h3>
+                                    <span className="overview-value">{state.settings.questionsPerLevel}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                );
             default:
                 return null;
         }
@@ -294,7 +385,7 @@ function MultiplyGame() {
 
     return (
         <div className="app">
-            <Header title="MultiplyMaster" onHome={() => navigate('/')} onSettings={() => {}} onDashboard={() => {}} />
+            <Header title="MultiplyMaster" onHome={() => navigate('/')} onSettings={() => dispatch({ type: 'SET_SCREEN', payload: 'settings' })} onDashboard={() => dispatch({ type: 'SET_SCREEN', payload: 'dashboard' })} />
             <main className="main">{renderScreen()}</main>
         </div>
     );

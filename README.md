@@ -5,46 +5,54 @@ Educational games for children ages 6-14 with learning difficulties, built on ne
 ## 🚀 Quick Start
 
 ```bash
-cd clockwise-react && npm install && npm run dev
+cd neuroplasticity-game-center && npm install && npm run dev
 ```
 
-Then open `http://localhost:5173` - the home screen lets you choose between games.
+Then open the URL shown in your terminal (usually `http://localhost:5173`) - the home screen lets you choose between games.
 
 ## 🎮 Games
 
 ### 🕐 ClockWise
-**Skill**: Time Reading | **Levels**: 12
+**Skill**: Time Reading | **Levels**: 14
 
 Progressive clock reading from single hour hand to 24-hour time:
-1. Hour hand at cardinal positions (12, 3, 6, 9)
-2. Hour hand at all positions
-3. Two hands - on the hour
-4. Half past times (:30)
-5. Quarter hours (:15, :45)
-6. Five-minute intervals
-7. Any minute
-8. Digital time matching
-9. Time word problems
-10. Elapsed time
-11. 24-hour introduction
-12. Full 24-hour mastery
+
+| Level | Name | Description |
+|-------|------|-------------|
+| 1 | Hour Hand - Cardinal | Read hour hand at 12, 3, 6, 9 |
+| 2 | Hour Hand - All | Read hour hand at any position |
+| 3 | Two Hands - On the Hour | Both hands, :00 times |
+| 4 | Half Past | :30 times |
+| 5 | Quarter Hours | :15 and :45 |
+| 6 | Five-Minute Intervals | :05, :10, :20, etc. |
+| 7 | Any Minute | Precise minute reading |
+| 8 | 24-Hour Introduction (PM) | Afternoon times in 24h format |
+| 9 | Mixed 12/24 Hour | Convert between formats (5-min intervals) |
+| 10 | Any Minute 12/24 Hour | Any minute, both formats |
+| 11 | No Numbers - 24 Hour | Read without number guides |
+| 12 | Real-World Applications | Schedules and timetables |
+| 13 | Time Calculations | Add/subtract time |
+| 14 | 24-Hour Time Master | Full mastery |
 
 ### ✖️ MultiplyMaster
 **Skill**: Multiplication | **Levels**: 12
 
 Learn multiplication through understanding, not memorization:
-1. What is multiplication? (visual groups)
-2. Doubles (×2)
-3. Tens (×10) - just add zero
-4. Fives (×5) - half of tens
-5. Threes (×3) - double plus one
-6. Fours (×4) - double the double
-7. Sixes (×6) - five plus one
-8. Sevens (×7) - five plus two
-9. Eights (×8) - triple double
-10. Nines (×9) - ten minus one
-11. Mixed practice (easy)
-12. Mixed practice (all tables)
+
+| Level | Name | Strategy |
+|-------|------|----------|
+| 1 | What is Multiplication? | Visual groups (2× table, 1-5) |
+| 2 | Doubles (×2) | Full 2× table |
+| 3 | Tens (×10) | Add zero pattern |
+| 4 | Fives (×5) | Half of tens |
+| 5 | Threes (×3) | ×2 + one more group |
+| 6 | Fours (×4) | Double the double |
+| 7 | Sixes (×6) | ×5 + one more group |
+| 8 | Sevens (×7) | ×5 + ×2 |
+| 9 | Eights (×8) | Triple double |
+| 10 | Nines (×9) | ×10 - one group |
+| 11 | Mixed Easy | 2s, 5s, 10s combined |
+| 12 | Mixed All | All tables combined |
 
 ## 🧠 Scientific Foundation
 
@@ -87,20 +95,22 @@ Children earn **1 Robux per minute** of play time. This shared currency works ac
 
 ```
 neuroplasticity-games/
-├── game-hub/            # Main launcher with game selection
-│   └── src/
-│       ├── components/  # FloatingShapes, GameCard, RobuxDisplay
-│       └── utils/       # Shared storage for Robux
-├── clockwise-react/     # Clock reading game
-│   └── src/
-│       ├── components/  # Clock, TimeLegend, screens/
-│       ├── hooks/       # useGameState
-│       └── utils/       # levels, storage, clock, adaptive
-├── multiply-master/     # Multiplication game
-│   └── src/
-│       ├── components/  # VisualMultiplication, Legend, screens/
-│       ├── hooks/       # useGameState
-│       └── utils/       # levels, storage
+├── neuroplasticity-game-center/   # Main unified app
+│   ├── src/
+│   │   ├── components/shared/     # RobuxCounter, Header, Home, FeedbackModal
+│   │   ├── games/
+│   │   │   ├── clockwise/         # Clock reading game
+│   │   │   │   ├── Clock.jsx
+│   │   │   │   ├── TimeLegend.jsx
+│   │   │   │   └── screens/       # Welcome, Game, LevelComplete, etc.
+│   │   │   └── multiply/          # Multiplication game
+│   │   │       ├── MultiplicationLegend.jsx
+│   │   │       ├── VisualMultiplication.jsx
+│   │   │       └── screens/
+│   │   ├── hooks/                 # useGameState (shared game logic)
+│   │   └── utils/                 # levels, storage, clock, adaptive
+│   └── public/images/             # FNAF characters, Robux icon
+├── _archive/                      # Old standalone versions (reference only)
 └── README.md
 ```
 

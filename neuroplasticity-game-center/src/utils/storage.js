@@ -4,7 +4,9 @@ const KEYS = {
     SESSIONS: 'clockwise_sessions',
     CURRENT_SESSION: 'clockwise_current_session',
     ROBUX_COUNT: 'neuroplasticity_robux_count', // Shared across all games
-    ROBUX_LAST_UPDATE: 'neuroplasticity_robux_last_update'
+    ROBUX_LAST_UPDATE: 'neuroplasticity_robux_last_update',
+    MULTIPLY_SETTINGS: 'multiply_settings',
+    MULTIPLY_PROGRESS: 'multiply_progress'
 };
 
 const defaultSettings = {
@@ -196,7 +198,47 @@ export const getLastRobuxUpdate = () => {
     try {
         const lastUpdate = localStorage.getItem(KEYS.ROBUX_LAST_UPDATE);
         return lastUpdate ? parseInt(lastUpdate, 10) : Date.now();
-    } catch (e) {
+    } catch {
         return Date.now();
+    }
+};
+
+// MultiplyMaster settings
+const defaultMultiplySettings = {
+    questionsPerLevel: 10,
+    showTimer: true
+};
+
+export const getMultiplySettings = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.MULTIPLY_SETTINGS);
+        return stored ? { ...defaultMultiplySettings, ...JSON.parse(stored) } : { ...defaultMultiplySettings };
+    } catch {
+        return { ...defaultMultiplySettings };
+    }
+};
+
+export const saveMultiplySettings = (settings) => {
+    try {
+        localStorage.setItem(KEYS.MULTIPLY_SETTINGS, JSON.stringify(settings));
+    } catch {
+        console.error('Failed to save multiply settings');
+    }
+};
+
+export const getMultiplyProgress = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.MULTIPLY_PROGRESS);
+        return stored ? JSON.parse(stored) : { currentLevel: 1 };
+    } catch {
+        return { currentLevel: 1 };
+    }
+};
+
+export const saveMultiplyProgress = (progress) => {
+    try {
+        localStorage.setItem(KEYS.MULTIPLY_PROGRESS, JSON.stringify(progress));
+    } catch {
+        console.error('Failed to save multiply progress');
     }
 };
