@@ -89,6 +89,8 @@ export const useGameState = () => {
     const lastRobuxMinuteRef = useRef(0);
     const lastActivityRef = useRef(0);
     const pauseCheckRef = useRef(null);
+    const pauseStartTimeRef = useRef(null);
+    const totalPausedTimeRef = useRef(0);
     const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
     useEffect(() => {
@@ -124,6 +126,7 @@ export const useGameState = () => {
         pauseCheckRef.current = setInterval(() => {
             if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
                 setIsPaused(true);
+                pauseStartTimeRef.current = Date.now();
                 if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
                 if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
             }
@@ -138,14 +141,19 @@ export const useGameState = () => {
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
         if (isPaused) {
+            // Add the paused duration to total
+            if (pauseStartTimeRef.current) {
+                totalPausedTimeRef.current += Date.now() - pauseStartTimeRef.current;
+                pauseStartTimeRef.current = null;
+            }
             setIsPaused(false);
-            // Restart timers
+            // Restart timers - use adjusted time
             if (state.session) {
                 sessionTimerRef.current = setInterval(() => {
                     dispatch({ type: 'SET_TIMER', payload: Date.now() });
                 }, 1000);
                 robuxTimerRef.current = setInterval(() => {
-                    const elapsed = Date.now() - state.session.startTime;
+                    const elapsed = Date.now() - state.session.startTime - totalPausedTimeRef.current;
                     const currentMinute = Math.floor(elapsed / 60000);
                     if (currentMinute > lastRobuxMinuteRef.current) {
                         lastRobuxMinuteRef.current = currentMinute;
@@ -217,6 +225,8 @@ export const useGameState = () => {
         
         if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
         lastRobuxMinuteRef.current = 0;
+        totalPausedTimeRef.current = 0;
+        pauseStartTimeRef.current = null;
         robuxTimerRef.current = setInterval(() => {
             const elapsed = Date.now() - session.startTime;
             const currentMinute = Math.floor(elapsed / 60000);
@@ -516,7 +526,7 @@ export const useGameState = () => {
 
     const getSessionTime = useCallback(() => {
         if (!state.sessionStartTime) return '0:00';
-        const elapsed = Date.now() - state.sessionStartTime;
+        const elapsed = Date.now() - state.sessionStartTime - totalPausedTimeRef.current;
         return formatDuration(elapsed);
     }, [state.sessionStartTime, formatDuration]);
 

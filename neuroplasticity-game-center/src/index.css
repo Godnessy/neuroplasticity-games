@@ -1193,6 +1193,69 @@ body {
     color: var(--color-text-secondary);
 }
 
+/* Time of Day game styles */
+.timeofday-layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.period-image-container {
+    width: 100%;
+    max-width: 400px;
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.period-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.period-image-placeholder {
+    width: 100%;
+    max-width: 400px;
+    height: 250px;
+    background: var(--color-surface);
+    border-radius: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.period-image-placeholder span {
+    font-size: 4rem;
+}
+
+.word-display {
+    padding: 2rem;
+    background: var(--color-surface);
+    border-radius: 1rem;
+    text-align: center;
+}
+
+.big-word {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.question-description {
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    font-style: italic;
+    margin-top: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-surface);
+    border-radius: 0.5rem;
+    border-left: 3px solid var(--color-primary);
+}
+
 .settings-number-input {
     font-size: 2rem;
     font-weight: 600;

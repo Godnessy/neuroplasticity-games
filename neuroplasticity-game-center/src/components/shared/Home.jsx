@@ -30,9 +30,40 @@ const games = [
                 <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="4"/>
             </svg>
         ),
-        levels: 12,
+        levels: 11,
         skill: 'Multiplication',
         character: 'bonnie'
+    },
+    {
+        id: 'divide',
+        path: '/divide',
+        name: 'DivideMaster',
+        description: 'Learn division - the opposite of multiplication!',
+        icon: (
+            <svg viewBox="0 0 100 100" width="60" height="60">
+                <text x="50" y="60" fontSize="50" textAnchor="middle" fill="currentColor" fontWeight="bold">÷</text>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="4"/>
+            </svg>
+        ),
+        levels: 9,
+        skill: 'Division',
+        character: 'chica'
+    },
+    {
+        id: 'timeofday',
+        path: '/timeofday',
+        name: 'Time of Day',
+        description: 'Learn times of day in English and Norwegian',
+        icon: (
+            <svg viewBox="0 0 100 100" width="60" height="60">
+                <circle cx="50" cy="35" r="20" fill="currentColor" opacity="0.8"/>
+                <path d="M10 70 Q50 50 90 70" stroke="currentColor" strokeWidth="4" fill="none"/>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="4"/>
+            </svg>
+        ),
+        levels: 1,
+        skill: 'Language & Time',
+        character: 'foxy'
     }
 ];
 
@@ -99,7 +130,6 @@ const Home = ({ robuxCount, onResetRobux }) => {
                         <p>Built on research from:</p>
                         <ul>
                             <li><strong>Dr. Michael Merzenich</strong> - Brain plasticity</li>
-                            <li><strong>Dr. Edward Taub</strong> - Constraint-induced therapy</li>
                             <li><strong>Arrowsmith School</strong> - Cognitive exercises</li>
                         </ul>
                     </div>

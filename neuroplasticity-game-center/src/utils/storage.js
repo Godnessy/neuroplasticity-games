@@ -6,7 +6,11 @@ const KEYS = {
     ROBUX_COUNT: 'neuroplasticity_robux_count', // Shared across all games
     ROBUX_LAST_UPDATE: 'neuroplasticity_robux_last_update',
     MULTIPLY_SETTINGS: 'multiply_settings',
-    MULTIPLY_PROGRESS: 'multiply_progress'
+    MULTIPLY_PROGRESS: 'multiply_progress',
+    DIVIDE_SETTINGS: 'divide_settings',
+    DIVIDE_PROGRESS: 'divide_progress',
+    TIMEOFDAY_SETTINGS: 'timeofday_settings',
+    TIMEOFDAY_PROGRESS: 'timeofday_progress'
 };
 
 const defaultSettings = {
@@ -249,5 +253,93 @@ export const saveMultiplyProgress = (progress) => {
         localStorage.setItem(KEYS.MULTIPLY_PROGRESS, JSON.stringify(progress));
     } catch {
         console.error('Failed to save multiply progress');
+    }
+};
+
+// Divide Game Storage
+const defaultDivideProgress = {
+    currentLevel: 1,
+    totalCorrect: 0,
+    totalQuestions: 0,
+    totalPlayTime: 0,
+    sessionsCount: 0,
+    lastPlayed: null
+};
+
+export const getDivideSettings = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.DIVIDE_SETTINGS);
+        return stored ? JSON.parse(stored) : { questionsPerLevel: 10 };
+    } catch {
+        return { questionsPerLevel: 10 };
+    }
+};
+
+export const saveDivideSettings = (settings) => {
+    try {
+        localStorage.setItem(KEYS.DIVIDE_SETTINGS, JSON.stringify(settings));
+    } catch {
+        console.error('Failed to save divide settings');
+    }
+};
+
+export const getDivideProgress = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.DIVIDE_PROGRESS);
+        return stored ? { ...defaultDivideProgress, ...JSON.parse(stored) } : { ...defaultDivideProgress };
+    } catch {
+        return { ...defaultDivideProgress };
+    }
+};
+
+export const saveDivideProgress = (progress) => {
+    try {
+        localStorage.setItem(KEYS.DIVIDE_PROGRESS, JSON.stringify(progress));
+    } catch {
+        console.error('Failed to save divide progress');
+    }
+};
+
+// TimeOfDay Game Storage
+const defaultTimeOfDayProgress = {
+    currentLevel: 1,
+    totalCorrect: 0,
+    totalQuestions: 0,
+    totalPlayTime: 0,
+    sessionsCount: 0,
+    lastPlayed: null
+};
+
+export const getTimeOfDaySettings = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.TIMEOFDAY_SETTINGS);
+        return stored ? JSON.parse(stored) : { questionsPerLevel: 10 };
+    } catch {
+        return { questionsPerLevel: 10 };
+    }
+};
+
+export const saveTimeOfDaySettings = (settings) => {
+    try {
+        localStorage.setItem(KEYS.TIMEOFDAY_SETTINGS, JSON.stringify(settings));
+    } catch {
+        console.error('Failed to save timeofday settings');
+    }
+};
+
+export const getTimeOfDayProgress = () => {
+    try {
+        const stored = localStorage.getItem(KEYS.TIMEOFDAY_PROGRESS);
+        return stored ? { ...defaultTimeOfDayProgress, ...JSON.parse(stored) } : { ...defaultTimeOfDayProgress };
+    } catch {
+        return { ...defaultTimeOfDayProgress };
+    }
+};
+
+export const saveTimeOfDayProgress = (progress) => {
+    try {
+        localStorage.setItem(KEYS.TIMEOFDAY_PROGRESS, JSON.stringify(progress));
+    } catch {
+        console.error('Failed to save timeofday progress');
     }
 };

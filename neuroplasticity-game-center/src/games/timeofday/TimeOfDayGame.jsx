@@ -1,24 +1,22 @@
 import { useNavigate } from 'react-router-dom';
 import { useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import * as Storage from '../../utils/storage';
-import * as Levels from '../../utils/multiplyLevels';
+import * as Levels from '../../utils/timeOfDayLevels';
 import Header from '../../components/shared/Header';
 import FeedbackModal from '../../components/shared/FeedbackModal';
 import RobuxCounter from '../../components/shared/RobuxCounter';
-import MultiplicationLegend from './MultiplicationLegend';
-import VisualMultiplication from './VisualMultiplication';
+import PeriodImage from './PeriodImage';
 
 const initialState = {
     currentScreen: 'welcome',
     currentLevel: 1,
     currentQuestion: null,
-    currentChoices: [],
     session: null,
     sessionStartTime: null,
     hintsUsed: 0,
     isProcessing: false,
     robuxCount: 0,
-    settings: { inputMethod: 'multiple', showTimer: true, questionsPerLevel: 10 },
+    settings: { questionsPerLevel: 10 },
     showFeedback: false,
     feedbackData: null
 };
@@ -27,7 +25,7 @@ const reducer = (state, action) => {
     switch (action.type) {
         case 'SET_SCREEN': return { ...state, currentScreen: action.payload };
         case 'SET_LEVEL': return { ...state, currentLevel: action.payload };
-        case 'SET_QUESTION': return { ...state, currentQuestion: action.payload.question, currentChoices: action.payload.choices, hintsUsed: 0 };
+        case 'SET_QUESTION': return { ...state, currentQuestion: action.payload, hintsUsed: 0 };
         case 'SET_SESSION': return { ...state, session: action.payload };
         case 'SET_SESSION_START': return { ...state, sessionStartTime: action.payload };
         case 'INCREMENT_HINTS': return { ...state, hintsUsed: state.hintsUsed + 1 };
@@ -41,7 +39,7 @@ const reducer = (state, action) => {
     }
 };
 
-function MultiplyGame() {
+function TimeOfDayGame() {
     const navigate = useNavigate();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [hintText, setHintText] = useState('');
@@ -49,20 +47,17 @@ function MultiplyGame() {
     const [isPaused, setIsPaused] = useState(false);
     const robuxTimerRef = useRef(null);
     const lastRobuxMinuteRef = useRef(0);
-    const isChangingLevelRef = useRef(false);
-    const lastActivityRef = useRef(0);
+        const lastActivityRef = useRef(0);
     const pauseCheckRef = useRef(null);
     const pauseStartTimeRef = useRef(null);
     const totalPausedTimeRef = useRef(0);
-    const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
+    const INACTIVITY_TIMEOUT = 2 * 60 * 1000;
 
     useEffect(() => {
         dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
-        // Load saved settings
-        const savedSettings = Storage.getMultiplySettings();
+        const savedSettings = Storage.getTimeOfDaySettings();
         dispatch({ type: 'SET_SETTINGS', payload: { ...state.settings, ...savedSettings } });
-        // Load saved progress
-        const savedProgress = Storage.getMultiplyProgress();
+        const savedProgress = Storage.getTimeOfDayProgress();
         if (savedProgress.currentLevel) {
             dispatch({ type: 'SET_LEVEL', payload: savedProgress.currentLevel });
         }
@@ -72,7 +67,6 @@ function MultiplyGame() {
         };
     }, []);
 
-    // Inactivity pause check
     useEffect(() => {
         if (!state.sessionStartTime || state.currentScreen !== 'game') {
             if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
@@ -84,7 +78,7 @@ function MultiplyGame() {
         pauseCheckRef.current = setInterval(() => {
             if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
                 setIsPaused(true);
-                pauseStartTimeRef.current = Date.now(); // Track when pause started
+                pauseStartTimeRef.current = Date.now();
                 if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
             }
         }, 1000);
@@ -94,17 +88,14 @@ function MultiplyGame() {
         };
     }, [state.sessionStartTime, state.currentScreen, isPaused, INACTIVITY_TIMEOUT]);
 
-    // Track activity
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
         if (isPaused) {
-            // Add the paused duration to total
             if (pauseStartTimeRef.current) {
                 totalPausedTimeRef.current += Date.now() - pauseStartTimeRef.current;
                 pauseStartTimeRef.current = null;
             }
             setIsPaused(false);
-            // Restart robux timer - use adjusted time (subtract paused time)
             if (state.session) {
                 robuxTimerRef.current = setInterval(() => {
                     const elapsed = Date.now() - state.session.startTime - totalPausedTimeRef.current;
@@ -135,26 +126,20 @@ function MultiplyGame() {
         const level = levelOverride !== null ? levelOverride : state.currentLevel;
         const levelConfig = Levels.getLevel(level);
         const question = Levels.generateQuestion(levelConfig);
-        const choices = Levels.generateChoices(question.correctAnswer, levelConfig);
-        dispatch({ type: 'SET_QUESTION', payload: { question, choices } });
+        dispatch({ type: 'SET_QUESTION', payload: question });
     }, [state.currentLevel]);
 
     const startSession = (level) => {
         const targetLevel = level || state.currentLevel;
-        
-        // Validate level exists
         const levelConfig = Levels.getLevel(targetLevel);
-        if (!levelConfig) {
-            console.error('Invalid level:', targetLevel);
-            return;
-        }
+        if (!levelConfig) return;
         
         dispatch({ type: 'SET_LEVEL', payload: targetLevel });
         const newSession = { level: targetLevel, startTime: Date.now(), answers: [], bestStreak: 0, currentStreak: 0 };
         dispatch({ type: 'SET_SESSION', payload: newSession });
         dispatch({ type: 'SET_SESSION_START', payload: Date.now() });
         lastRobuxMinuteRef.current = 0;
-        totalPausedTimeRef.current = 0; // Reset paused time for new session
+        totalPausedTimeRef.current = 0;
         pauseStartTimeRef.current = null;
         setHintText('');
 
@@ -171,50 +156,28 @@ function MultiplyGame() {
         }, 1000);
 
         const question = Levels.generateQuestion(levelConfig);
-        const choices = Levels.generateChoices(question.correctAnswer, levelConfig);
-        dispatch({ type: 'SET_QUESTION', payload: { question, choices } });
+        dispatch({ type: 'SET_QUESTION', payload: question });
         dispatch({ type: 'SET_SCREEN', payload: 'game' });
-        isChangingLevelRef.current = false;
     };
 
-    // Change level without resetting session timer
-    const changeLevel = (newLevel) => {
-        if (isChangingLevelRef.current) return; // Prevent rapid clicks
-        if (newLevel < 1 || newLevel > 11) return;
-        
-        isChangingLevelRef.current = true;
-        
-        const levelConfig = Levels.getLevel(newLevel);
-        if (!levelConfig) {
-            isChangingLevelRef.current = false;
-            return;
+    const levelConfig = Levels.getLevel(state.currentLevel);
+
+    const showHint = () => {
+        if (state.currentQuestion?.hint) {
+            setHintText(state.currentQuestion.hint);
+            dispatch({ type: 'INCREMENT_HINTS' });
         }
-        
-        dispatch({ type: 'SET_LEVEL', payload: newLevel });
-        // Reset answers for new level but keep session timer running
-        dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
-        setHintText('');
-        Levels.resetRecentQuestions();
-        
-        const question = Levels.generateQuestion(levelConfig);
-        const choices = Levels.generateChoices(question.correctAnswer, levelConfig);
-        dispatch({ type: 'SET_QUESTION', payload: { question, choices } });
-        
-        // Small delay before allowing another level change
-        setTimeout(() => {
-            isChangingLevelRef.current = false;
-        }, 300);
     };
+
 
     const processAnswer = useCallback((answer) => {
         if (state.isProcessing || !state.currentQuestion) return;
-        recordActivity(); // Track user activity
+        recordActivity();
         dispatch({ type: 'SET_PROCESSING', payload: true });
 
         const isCorrect = answer === state.currentQuestion.correctAnswer;
         const questionsRequired = state.settings.questionsPerLevel;
         
-        // Only count correct answers toward progress
         const correctCount = (state.session?.answers || []).filter(a => a.correct).length + (isCorrect ? 1 : 0);
         const newAnswers = [...(state.session?.answers || []), { correct: isCorrect }];
         const newStreak = isCorrect ? (state.session?.currentStreak || 0) + 1 : 0;
@@ -225,26 +188,30 @@ function MultiplyGame() {
             duration: Date.now() - state.session.startTime
         }});
 
-        const qA = state.currentQuestion.a;
-        const qB = state.currentQuestion.b;
-        const result = qA * qB;
-        const explanation = isCorrect ? `${qA} × ${qB} = ${result}` : `The answer is ${qA} × ${qB} = ${result}`;
+        const { period, questionType } = state.currentQuestion;
+        let explanation;
+        if (questionType.includes('norwegian')) {
+            explanation = isCorrect 
+                ? `${period.english} = ${period.norwegian}` 
+                : `The answer is ${period.english} = ${period.norwegian}`;
+        } else {
+            explanation = isCorrect 
+                ? `Correct! ${period.english}` 
+                : `The answer is ${period.english}`;
+        }
+        
         dispatch({ type: 'SHOW_FEEDBACK', payload: { isCorrect, explanation }});
 
         if (isCorrect) {
-            // Auto-dismiss after 1.5 seconds for correct answers
             setTimeout(() => {
-                // Check if still showing feedback (user didn't already dismiss)
                 if (!state.showFeedback) return;
                 
                 dispatch({ type: 'HIDE_FEEDBACK' });
                 
                 if (correctCount >= questionsRequired) {
-                    // Auto-advance to next level, keep timer running
-                    const nextLevel = state.currentLevel < 11 ? state.currentLevel + 1 : state.currentLevel;
-                    Storage.saveMultiplyProgress({ currentLevel: nextLevel });
+                    const nextLevel = state.currentLevel; // Single level game - stay on level 1
+                    Storage.saveTimeOfDayProgress({ currentLevel: nextLevel });
                     dispatch({ type: 'SET_LEVEL', payload: nextLevel });
-                    // Reset answers for new level
                     dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
                     Levels.resetRecentQuestions();
                     generateQuestion(nextLevel);
@@ -253,24 +220,22 @@ function MultiplyGame() {
                 }
             }, 1500);
         }
-    }, [state.isProcessing, state.currentQuestion, state.session, state.settings.questionsPerLevel, state.currentLevel, state.showFeedback, generateQuestion]);
+    }, [state.isProcessing, state.currentQuestion, state.session, state.settings.questionsPerLevel, state.currentLevel, state.showFeedback, generateQuestion, recordActivity]);
 
     const dismissFeedback = () => {
-        if (!state.showFeedback) return; // Already dismissed
+        if (!state.showFeedback) return;
         
         const wasCorrect = state.feedbackData?.isCorrect;
         dispatch({ type: 'HIDE_FEEDBACK' });
         
-        if (!wasCorrect) return; // Keep same question for incorrect
+        if (!wasCorrect) return;
         
         const correctCount = (state.session?.answers || []).filter(a => a.correct).length;
         
         if (correctCount >= state.settings.questionsPerLevel) {
-            // Advance to next level
-            const nextLevel = state.currentLevel < 11 ? state.currentLevel + 1 : state.currentLevel;
-            Storage.saveMultiplyProgress({ currentLevel: nextLevel });
+            const nextLevel = state.currentLevel; // Single level game - stay on level 1
+            Storage.saveTimeOfDayProgress({ currentLevel: nextLevel });
             dispatch({ type: 'SET_LEVEL', payload: nextLevel });
-            // Reset answers for new level
             dispatch({ type: 'UPDATE_SESSION', payload: { answers: [], currentStreak: 0 } });
             Levels.resetRecentQuestions();
             generateQuestion(nextLevel);
@@ -278,14 +243,6 @@ function MultiplyGame() {
             generateQuestion();
         }
     };
-
-    const showHint = () => {
-        const levelConfig = Levels.getLevel(state.currentLevel);
-        dispatch({ type: 'INCREMENT_HINTS' });
-        setHintText(Levels.getHint(levelConfig, state.hintsUsed));
-    };
-
-    const levelConfig = Levels.getLevel(state.currentLevel);
 
     const renderScreen = () => {
         switch (state.currentScreen) {
@@ -297,10 +254,10 @@ function MultiplyGame() {
                                 <RobuxCounter count={state.robuxCount} onReset={() => { Storage.setRobuxCount(0); dispatch({ type: 'SET_ROBUX', payload: 0 }); }} />
                             </div>
                             <div className="welcome-icon">
-                                <span style={{ fontSize: '80px' }}>🧮</span>
+                                <span style={{ fontSize: '80px' }}>🌅</span>
                             </div>
-                            <h2>MultiplyMaster</h2>
-                            <p className="welcome-subtitle">Learn multiplication through understanding</p>
+                            <h2>Time of Day</h2>
+                            <p className="welcome-subtitle">Learn times of day in English & Norwegian</p>
                             <button className="btn btn-primary btn-large" onClick={() => startSession()}>Start Learning</button>
                         </div>
                     </section>
@@ -316,20 +273,7 @@ function MultiplyGame() {
                                 </svg>
                             </button>
                             <div className="level-info">
-                                <div className="level-nav">
-                                    {state.currentLevel > 1 && (
-                                        <button className="level-nav-btn" onClick={() => changeLevel(state.currentLevel - 1)}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-                                        </button>
-                                    )}
-                                    <span className="level-badge">Level {state.currentLevel}</span>
-                                    {state.currentLevel < 11 && (
-                                        <button className="level-nav-btn" onClick={() => changeLevel(state.currentLevel + 1)}>
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                                        </button>
-                                    )}
-                                </div>
-                                <span className="level-name">{levelConfig.name}</span>
+                                <span className="level-badge">{levelConfig.name}</span>
                             </div>
                             <div className="progress-container">
                                 <div className="progress-bar">
@@ -346,21 +290,25 @@ function MultiplyGame() {
                             </div>
                             <RobuxCounter count={state.robuxCount} showReset={false} />
                         </div>
-                        <div className="game-layout">
-                            <MultiplicationLegend currentA={state.currentQuestion?.a} currentB={state.currentQuestion?.b} />
+                        <div className="game-layout timeofday-layout">
                             <div className="game-content">
-                                {state.currentQuestion?.showVisual && (
-                                    <VisualMultiplication a={state.currentQuestion.a} b={state.currentQuestion.b} />
+                                {state.currentQuestion?.showImage && (
+                                    <PeriodImage periodKey={state.currentQuestion.periodKey} />
+                                )}
+                                {state.currentQuestion?.showWord && (
+                                    <div className="word-display">
+                                        <span className="big-word">{state.currentQuestion.showWord}</span>
+                                    </div>
                                 )}
                                 <div className="prompt-container">
-                                    <p className="prompt-text">{state.currentQuestion?.prompt || 'Solve this!'}</p>
+                                    <p className="prompt-text">{state.currentQuestion?.prompt || 'Answer the question!'}</p>
+                                    {state.currentQuestion?.description && (
+                                        <p className="question-description">{state.currentQuestion.description}</p>
+                                    )}
                                     {hintText && <p className="hint-text">{hintText}</p>}
                                 </div>
-                                <div className="equation-display">
-                                    <span className="equation">{state.currentQuestion?.a} × {state.currentQuestion?.b} = ?</span>
-                                </div>
                                 <div className="multiple-choice-grid">
-                                    {state.currentChoices.map((choice, i) => (
+                                    {state.currentQuestion?.choices.map((choice, i) => (
                                         <button key={i} className="choice-btn" onClick={() => processAnswer(choice)} disabled={state.isProcessing}>
                                             {choice}
                                         </button>
@@ -408,7 +356,7 @@ function MultiplyGame() {
                                             const val = Math.min(30, Math.max(1, parseInt(e.target.value) || 10));
                                             const newSettings = { ...state.settings, questionsPerLevel: val };
                                             dispatch({ type: 'SET_SETTINGS', payload: newSettings });
-                                            Storage.saveMultiplySettings(newSettings);
+                                            Storage.saveTimeOfDaySettings(newSettings);
                                         }}
                                         className="settings-number-input"
                                     />
@@ -439,10 +387,6 @@ function MultiplyGame() {
                                     <h3>Robux Earned</h3>
                                     <span className="overview-value">{state.robuxCount}</span>
                                 </div>
-                                <div className="overview-card">
-                                    <h3>Questions per Level</h3>
-                                    <span className="overview-value">{state.settings.questionsPerLevel}</span>
-                                </div>
                             </div>
                         </div>
                     </section>
@@ -454,10 +398,16 @@ function MultiplyGame() {
 
     return (
         <div className="app">
-            <Header title="MultiplyMaster" onHome={() => navigate('/')} onSettings={() => dispatch({ type: 'SET_SCREEN', payload: 'settings' })} onDashboard={() => dispatch({ type: 'SET_SCREEN', payload: 'dashboard' })} />
-            <main className="main">{renderScreen()}</main>
+            <Header
+                onSettings={() => dispatch({ type: 'SET_SCREEN', payload: 'settings' })}
+                onDashboard={() => dispatch({ type: 'SET_SCREEN', payload: 'dashboard' })}
+                onHome={() => navigate('/')}
+            />
+            <main className="main">
+                {renderScreen()}
+            </main>
         </div>
     );
 }
 
-export default MultiplyGame;
+export default TimeOfDayGame;

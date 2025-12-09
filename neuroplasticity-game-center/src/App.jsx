@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import Home from './components/shared/Home';
 import ClockwiseGame from './games/clockwise/ClockwiseGame';
 import MultiplyGame from './games/multiply/MultiplyGame';
+import DivideGame from './games/divide/DivideGame';
+import TimeOfDayGame from './games/timeofday/TimeOfDayGame';
 import * as Storage from './utils/storage';
 import './index.css';
 
@@ -28,6 +30,8 @@ function App() {
                 <Route path="/" element={<Home robuxCount={robuxCount} onResetRobux={handleResetRobux} />} />
                 <Route path="/clockwise/*" element={<ClockwiseGame />} />
                 <Route path="/multiply/*" element={<MultiplyGame />} />
+                <Route path="/divide/*" element={<DivideGame />} />
+                <Route path="/timeofday/*" element={<TimeOfDayGame />} />
             </Routes>
         </BrowserRouter>
     );
