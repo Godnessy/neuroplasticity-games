@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useRef, useEffect } from 'react';
+import { useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import * as Storage from '../utils/storage';
 import * as Levels from '../utils/levels';
 import * as Adaptive from '../utils/adaptive';
@@ -81,11 +81,15 @@ const reducer = (state, action) => {
 
 export const useGameState = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [isPaused, setIsPaused] = useState(false);
     const questionTimerRef = useRef(null);
     const sessionTimerRef = useRef(null);
     const robuxTimerRef = useRef(null);
     const questionStartTimeRef = useRef(null);
     const lastRobuxMinuteRef = useRef(0);
+    const lastActivityRef = useRef(0);
+    const pauseCheckRef = useRef(null);
+    const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
     useEffect(() => {
         const settings = Storage.getSettings();
@@ -107,6 +111,53 @@ export const useGameState = () => {
             document.body.setAttribute('data-contrast', 'high');
         }
     }, []);
+
+    // Inactivity pause check
+    useEffect(() => {
+        if (!state.sessionStartTime || state.currentScreen !== 'game') {
+            if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
+            return;
+        }
+        
+        lastActivityRef.current = Date.now();
+        
+        pauseCheckRef.current = setInterval(() => {
+            if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
+                setIsPaused(true);
+                if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
+                if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
+            }
+        }, 1000);
+        
+        return () => {
+            if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
+        };
+    }, [state.sessionStartTime, state.currentScreen, isPaused, INACTIVITY_TIMEOUT]);
+
+    // Track activity
+    const recordActivity = useCallback(() => {
+        lastActivityRef.current = Date.now();
+        if (isPaused) {
+            setIsPaused(false);
+            // Restart timers
+            if (state.session) {
+                sessionTimerRef.current = setInterval(() => {
+                    dispatch({ type: 'SET_TIMER', payload: Date.now() });
+                }, 1000);
+                robuxTimerRef.current = setInterval(() => {
+                    const elapsed = Date.now() - state.session.startTime;
+                    const currentMinute = Math.floor(elapsed / 60000);
+                    if (currentMinute > lastRobuxMinuteRef.current) {
+                        lastRobuxMinuteRef.current = currentMinute;
+                        const current = Storage.getRobuxCount();
+                        const updated = current + 1;
+                        Storage.setRobuxCount(updated);
+                        dispatch({ type: 'SET_ROBUX', payload: updated });
+                    }
+                }, 1000);
+            }
+        }
+    }, [isPaused, state.session]);
 
     const showScreen = useCallback((screen) => {
         dispatch({ type: 'SET_SCREEN', payload: screen });
@@ -494,6 +545,8 @@ export const useGameState = () => {
         resetProgress,
         formatDuration,
         getSessionTime,
-        stopQuestionTimer
+        stopQuestionTimer,
+        isPaused,
+        recordActivity
     };
 };

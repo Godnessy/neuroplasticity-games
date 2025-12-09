@@ -46,9 +46,13 @@ function MultiplyGame() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [hintText, setHintText] = useState('');
     const [sessionTime, setSessionTime] = useState('0:00');
+    const [isPaused, setIsPaused] = useState(false);
     const robuxTimerRef = useRef(null);
     const lastRobuxMinuteRef = useRef(0);
     const isChangingLevelRef = useRef(false);
+    const lastActivityRef = useRef(0);
+    const pauseCheckRef = useRef(null);
+    const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
     useEffect(() => {
         dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
@@ -62,11 +66,54 @@ function MultiplyGame() {
         }
         return () => {
             if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
+            if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
         };
     }, []);
 
+    // Inactivity pause check
     useEffect(() => {
-        if (!state.sessionStartTime) return;
+        if (!state.sessionStartTime || state.currentScreen !== 'game') {
+            if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
+            return;
+        }
+        
+        lastActivityRef.current = Date.now();
+        
+        pauseCheckRef.current = setInterval(() => {
+            if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
+                setIsPaused(true);
+                if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
+            }
+        }, 1000);
+        
+        return () => {
+            if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
+        };
+    }, [state.sessionStartTime, state.currentScreen, isPaused, INACTIVITY_TIMEOUT]);
+
+    // Track activity
+    const recordActivity = useCallback(() => {
+        lastActivityRef.current = Date.now();
+        if (isPaused) {
+            setIsPaused(false);
+            // Restart robux timer
+            if (state.session) {
+                robuxTimerRef.current = setInterval(() => {
+                    const elapsed = Date.now() - state.session.startTime;
+                    const minutes = Math.floor(elapsed / 60000);
+                    if (minutes > lastRobuxMinuteRef.current) {
+                        lastRobuxMinuteRef.current = minutes;
+                        const newRobux = Storage.getRobuxCount() + 1;
+                        Storage.setRobuxCount(newRobux);
+                        dispatch({ type: 'SET_ROBUX', payload: newRobux });
+                    }
+                }, 1000);
+            }
+        }
+    }, [isPaused, state.session]);
+
+    useEffect(() => {
+        if (!state.sessionStartTime || isPaused) return;
         const timer = setInterval(() => {
             const elapsed = Date.now() - state.sessionStartTime;
             const mins = Math.floor(elapsed / 60000);
@@ -74,7 +121,7 @@ function MultiplyGame() {
             setSessionTime(`${mins}:${secs.toString().padStart(2, '0')}`);
         }, 1000);
         return () => clearInterval(timer);
-    }, [state.sessionStartTime]);
+    }, [state.sessionStartTime, isPaused]);
 
     const generateQuestion = useCallback((levelOverride = null) => {
         const level = levelOverride !== null ? levelOverride : state.currentLevel;
@@ -151,6 +198,7 @@ function MultiplyGame() {
 
     const processAnswer = useCallback((answer) => {
         if (state.isProcessing || !state.currentQuestion) return;
+        recordActivity(); // Track user activity
         dispatch({ type: 'SET_PROCESSING', payload: true });
 
         const isCorrect = answer === state.currentQuestion.correctAnswer;
@@ -312,6 +360,17 @@ function MultiplyGame() {
                             </div>
                         </div>
                         <FeedbackModal show={state.showFeedback} data={state.feedbackData} onDismiss={dismissFeedback} />
+                        {isPaused && (
+                            <div className="pause-overlay" onClick={recordActivity}>
+                                <div className="pause-content">
+                                    <h2>⏸️ Paused</h2>
+                                    <p>Game paused due to inactivity</p>
+                                    <button className="btn btn-primary btn-large" onClick={recordActivity}>
+                                        Resume
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </section>
                 );
             case 'settings':

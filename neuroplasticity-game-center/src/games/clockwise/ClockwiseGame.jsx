@@ -33,7 +33,9 @@ function ClockwiseGame() {
         resetProgress,
         formatDuration,
         getSessionTime,
-        generateQuestion
+        generateQuestion,
+        isPaused,
+        recordActivity
     } = useGameState();
 
     const handleExportData = () => {
@@ -71,31 +73,44 @@ function ClockwiseGame() {
                 );
             case 'game':
                 return (
-                    <Game
-                        currentLevel={state.currentLevel}
-                        currentQuestion={state.currentQuestion}
-                        session={state.session}
-                        robuxCount={state.robuxCount}
-                        settings={state.settings}
-                        showingNumbers={state.showingNumbers}
-                        selectedHour={state.selectedHour}
-                        selectedMinute={state.selectedMinute}
-                        showFeedback={state.showFeedback}
-                        feedbackData={state.feedbackData}
-                        characterIndex={state.characterIndex}
-                        sessionTime={getSessionTime()}
-                        onHome={handleGoHome}
-                        onResetRobux={resetRobux}
-                        onPrevLevel={goToPrevLevel}
-                        onNextLevel={goToNextLevel}
-                        onShowHint={showHint}
-                        onToggleNumbers={toggleNumbers}
-                        onSelectHour={setSelectedHour}
-                        onSelectMinute={setSelectedMinute}
-                        onProcessAnswer={processAnswer}
-                        onDismissFeedback={dismissFeedback}
-                        isProcessing={state.isProcessing}
-                    />
+                    <>
+                        <Game
+                            currentLevel={state.currentLevel}
+                            currentQuestion={state.currentQuestion}
+                            session={state.session}
+                            robuxCount={state.robuxCount}
+                            settings={state.settings}
+                            showingNumbers={state.showingNumbers}
+                            selectedHour={state.selectedHour}
+                            selectedMinute={state.selectedMinute}
+                            showFeedback={state.showFeedback}
+                            feedbackData={state.feedbackData}
+                            characterIndex={state.characterIndex}
+                            sessionTime={getSessionTime()}
+                            onHome={handleGoHome}
+                            onResetRobux={resetRobux}
+                            onPrevLevel={goToPrevLevel}
+                            onNextLevel={goToNextLevel}
+                            onShowHint={showHint}
+                            onToggleNumbers={toggleNumbers}
+                            onSelectHour={setSelectedHour}
+                            onSelectMinute={setSelectedMinute}
+                            onProcessAnswer={processAnswer}
+                            onDismissFeedback={dismissFeedback}
+                            isProcessing={state.isProcessing}
+                        />
+                        {isPaused && (
+                            <div className="pause-overlay" onClick={recordActivity}>
+                                <div className="pause-content">
+                                    <h2>⏸️ Paused</h2>
+                                    <p>Game paused due to inactivity</p>
+                                    <button className="btn btn-primary btn-large" onClick={recordActivity}>
+                                        Resume
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 );
             case 'levelComplete':
                 return (

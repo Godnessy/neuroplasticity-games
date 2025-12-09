@@ -226,12 +226,21 @@ export const saveMultiplySettings = (settings) => {
     }
 };
 
+const defaultMultiplyProgress = {
+    currentLevel: 1,
+    totalCorrect: 0,
+    totalQuestions: 0,
+    totalPlayTime: 0,
+    sessionsCount: 0,
+    lastPlayed: null
+};
+
 export const getMultiplyProgress = () => {
     try {
         const stored = localStorage.getItem(KEYS.MULTIPLY_PROGRESS);
-        return stored ? JSON.parse(stored) : { currentLevel: 1 };
+        return stored ? { ...defaultMultiplyProgress, ...JSON.parse(stored) } : { ...defaultMultiplyProgress };
     } catch {
-        return { currentLevel: 1 };
+        return { ...defaultMultiplyProgress };
     }
 };
 
