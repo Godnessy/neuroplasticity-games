@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import * as Statistics from '../../utils/statisticsService';
 import * as Storage from '../../utils/storage';
 import './StatisticsDashboard.css';
@@ -14,6 +14,7 @@ const GAME_NAMES = {
 
 function StatisticsDashboard() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const [selectedGame, setSelectedGame] = useState('all');
     const [stats, setStats] = useState(null);
@@ -28,10 +29,6 @@ function StatisticsDashboard() {
     }, [searchParams]);
 
     useEffect(() => {
-        loadStats();
-    }, [selectedGame]);
-
-    const loadStats = () => {
         if (selectedGame === 'all') {
             const allStats = Statistics.getAllGameStats();
             setStats(allStats);
@@ -39,13 +36,20 @@ function StatisticsDashboard() {
             const gameStats = Statistics.getGameStats(selectedGame);
             setStats({ games: { [selectedGame]: gameStats }, totals: null });
         }
-    };
+    }, [selectedGame]);
 
     const formatTime = (seconds) => {
+        if (seconds < 60) {
+            return `${seconds}s`;
+        }
         const hours = Math.floor(seconds / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
         if (hours > 0) {
             return `${hours}h ${minutes}m`;
+        }
+        if (secs > 0) {
+            return `${minutes}m ${secs}s`;
         }
         return `${minutes}m`;
     };
@@ -88,11 +92,11 @@ function StatisticsDashboard() {
     return (
         <div className="statistics-dashboard">
             <div className="dashboard-header">
-                <button className="btn btn-back" onClick={() => navigate('/')}>
+                <button className="btn btn-back" onClick={() => navigate(location.state?.from || '/')}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
                     </svg>
+                    Back
                 </button>
                 <h1>Statistics Dashboard</h1>
                 <button className="btn btn-export" onClick={exportData}>
@@ -201,8 +205,8 @@ function StatisticsDashboard() {
                         </thead>
                         <tbody>
                             {allSessions.map((session) => (
-                                <>
-                                    <tr key={session.sessionId}>
+                                <React.Fragment key={session.sessionId}>
+                                    <tr>
                                         <td>{formatDate(session.startTime)}</td>
                                         <td>{GAME_NAMES[session.gameName] || session.gameName}</td>
                                         <td>Level {session.level}</td>
@@ -254,7 +258,7 @@ function StatisticsDashboard() {
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>

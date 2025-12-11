@@ -449,8 +449,66 @@ export const clearEnhancedStats = () => {
             localStorage.removeItem(`${game}_enhanced_sessions`);
         });
         localStorage.removeItem('neuroplasticity_all_games_stats');
-        console.log('Cleared all enhanced statistics');
     } catch (error) {
         console.error('Failed to clear enhanced stats:', error);
+    }
+};
+
+// ============================================================================
+// Active Game Session State (for preserving state during navigation)
+// ============================================================================
+
+/**
+ * Save active game session state (for when navigating away temporarily)
+ * @param {string} gameName - Game name (multiply, divide, timeofday, clockwise)
+ * @param {object} sessionState - The current game state to preserve
+ */
+export const saveActiveGameState = (gameName, sessionState) => {
+    try {
+        const key = `${gameName}_active_state`;
+        localStorage.setItem(key, JSON.stringify({
+            ...sessionState,
+            savedAt: Date.now()
+        }));
+    } catch (error) {
+        console.error(`Failed to save active state for ${gameName}:`, error);
+    }
+};
+
+/**
+ * Get active game session state
+ * @param {string} gameName - Game name
+ * @returns {object|null} The saved state or null if expired/not found
+ */
+export const getActiveGameState = (gameName) => {
+    try {
+        const key = `${gameName}_active_state`;
+        const stored = localStorage.getItem(key);
+        if (!stored) return null;
+        
+        const state = JSON.parse(stored);
+        // Expire after 30 minutes of inactivity
+        const EXPIRY_TIME = 30 * 60 * 1000;
+        if (Date.now() - state.savedAt > EXPIRY_TIME) {
+            localStorage.removeItem(key);
+            return null;
+        }
+        return state;
+    } catch (error) {
+        console.error(`Failed to get active state for ${gameName}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Clear active game session state
+ * @param {string} gameName - Game name
+ */
+export const clearActiveGameState = (gameName) => {
+    try {
+        const key = `${gameName}_active_state`;
+        localStorage.removeItem(key);
+    } catch (error) {
+        console.error(`Failed to clear active state for ${gameName}:`, error);
     }
 };

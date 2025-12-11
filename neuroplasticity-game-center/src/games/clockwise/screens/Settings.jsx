@@ -81,6 +81,22 @@ const Settings = ({ settings, onBack, onUpdateSetting }) => {
                 <div className="settings-group">
                     <h3>Game Options</h3>
                     <div className="setting-item">
+                        <label htmlFor="setting-questions">Questions per Level</label>
+                        <select 
+                            id="setting-questions" 
+                            className="setting-select"
+                            value={settings?.questionsPerLevel || 10}
+                            onChange={(e) => onUpdateSetting('questionsPerLevel', parseInt(e.target.value))}
+                        >
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                            <option value="20">20</option>
+                            <option value="25">25</option>
+                            <option value="30">30</option>
+                        </select>
+                    </div>
+                    <div className="setting-item">
                         <label htmlFor="setting-audio">Audio Instructions</label>
                         <input 
                             type="checkbox" 

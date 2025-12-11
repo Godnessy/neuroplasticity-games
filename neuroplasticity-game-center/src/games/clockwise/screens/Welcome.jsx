@@ -1,6 +1,9 @@
+import { useNavigate } from 'react-router-dom';
 import RobuxCounter from '../../../components/shared/RobuxCounter';
 
 const Welcome = ({ robuxCount, onResetRobux, onStartNew, onContinue, hasContinue }) => {
+    const navigate = useNavigate();
+
     return (
         <section className="screen screen-welcome active">
             <div className="welcome-content">
@@ -26,6 +29,9 @@ const Welcome = ({ robuxCount, onResetRobux, onStartNew, onContinue, hasContinue
                             Continue
                         </button>
                     )}
+                    <button className="btn btn-secondary" onClick={() => navigate('/stats?game=clockwise', { state: { from: '/clockwise' } })} style={{ marginTop: '10px' }}>
+                        📊 View Statistics
+                    </button>
                 </div>
                 <p className="welcome-info">Designed for children ages 6-14</p>
             </div>

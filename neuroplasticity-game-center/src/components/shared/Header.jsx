@@ -1,4 +1,4 @@
-const Header = ({ onSettings, onDashboard, onHome, title = 'ClockWise' }) => {
+const Header = ({ onSettings, onStatistics, onHome, title = 'ClockWise' }) => {
     return (
         <header className="header">
             {onHome && (
@@ -23,8 +23,8 @@ const Header = ({ onSettings, onDashboard, onHome, title = 'ClockWise' }) => {
                 </button>
                 <button 
                     className="nav-btn" 
-                    aria-label="Progress Dashboard"
-                    onClick={onDashboard}
+                    aria-label="Statistics"
+                    onClick={onStatistics}
                 >
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 3v18h18"></path>

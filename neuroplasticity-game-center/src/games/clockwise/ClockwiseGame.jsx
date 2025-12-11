@@ -4,6 +4,7 @@ import { useGameState } from '../../hooks/useGameState';
 import * as Storage from '../../utils/storage';
 import * as RobuxTimer from '../../utils/robuxTimerService';
 import * as Statistics from '../../utils/statisticsService';
+import * as GlobalTimer from '../../utils/globalSessionTimer';
 import Header from '../../components/shared/Header';
 import Welcome from './screens/Welcome';
 import Game from './screens/Game';
@@ -46,6 +47,21 @@ function ClockwiseGame() {
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [breakSessionStats, setBreakSessionStats] = useState(null);
     const BREAK_REMINDER_TIME = 20 * 60; // 20 minutes in seconds
+
+    // Cleanup on unmount - freeze global timer when leaving game
+    useEffect(() => {
+        return () => {
+            // End statistics session if active
+            if (currentSessionIdRef.current) {
+                const robuxEarned = RobuxTimer.getRobuxEarned();
+                Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'navigation');
+                currentSessionIdRef.current = null;
+            }
+            RobuxTimer.stopTimer();
+            // Freeze global timer when leaving game (will resume when entering another game)
+            GlobalTimer.freezeTimer();
+        };
+    }, [currentSessionIdRef]);
 
     // Check for 20-minute break reminder
     useEffect(() => {
@@ -139,7 +155,7 @@ function ClockwiseGame() {
                             feedbackData={state.feedbackData}
                             characterIndex={state.characterIndex}
                             sessionTime={getSessionTime()}
-                            onHome={handleGoHome}
+                            onBack={() => showScreen('welcome')}
                             onResetRobux={resetRobux}
                             onPrevLevel={goToPrevLevel}
                             onNextLevel={goToNextLevel}
@@ -188,7 +204,10 @@ function ClockwiseGame() {
                 return (
                     <Settings
                         settings={state.settings}
-                        onBack={() => showScreen('welcome')}
+                        onBack={() => {
+                            GlobalTimer.unfreezeTimer();
+                            showScreen(state.previousScreen || 'welcome');
+                        }}
                         onUpdateSetting={updateSetting}
                     />
                 );
@@ -207,8 +226,24 @@ function ClockwiseGame() {
     return (
         <div className="app">
             <Header
-                onSettings={() => showScreen('settings')}
-                onDashboard={() => showScreen('dashboard')}
+                onSettings={() => {
+                    GlobalTimer.freezeTimer();
+                    showScreen('settings');
+                }}
+                onStatistics={() => {
+                    GlobalTimer.freezeTimer();
+                    // Save current game state before navigating
+                    if (state.currentScreen === 'game' && state.session) {
+                        Storage.saveActiveGameState('clockwise', {
+                            currentScreen: state.currentScreen,
+                            currentLevel: state.currentLevel,
+                            session: state.session,
+                            sessionStartTime: state.sessionStartTime,
+                            currentQuestion: state.currentQuestion
+                        });
+                    }
+                    navigate('/stats?game=clockwise', { state: { from: '/clockwise' } });
+                }}
                 onHome={() => navigate('/')}
             />
             <main className="main">

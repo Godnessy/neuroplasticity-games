@@ -6,9 +6,11 @@ import * as Audio from '../utils/audio';
 import { APP_CONFIG, CLOCK_CENTER_IMAGES } from '../utils/config';
 import * as RobuxTimer from '../utils/robuxTimerService';
 import * as Statistics from '../utils/statisticsService';
+import * as GlobalTimer from '../utils/globalSessionTimer';
 
 const initialState = {
     currentScreen: 'welcome',
+    previousScreen: null,
     currentLevel: 1,
     currentQuestion: null,
     session: null,
@@ -33,7 +35,7 @@ const initialState = {
 const reducer = (state, action) => {
     switch (action.type) {
         case 'SET_SCREEN':
-            return { ...state, currentScreen: action.payload };
+            return { ...state, previousScreen: state.currentScreen, currentScreen: action.payload };
         case 'SET_LEVEL':
             return { ...state, currentLevel: action.payload };
         case 'SET_QUESTION':
@@ -111,6 +113,25 @@ export const useGameState = () => {
         if (settings.highContrast) {
             document.body.setAttribute('data-contrast', 'high');
         }
+        
+        // Restore active game state if returning from stats
+        const activeState = Storage.getActiveGameState('clockwise');
+        if (activeState && activeState.currentScreen === 'game') {
+            dispatch({ type: 'SET_SCREEN', payload: 'game' });
+            dispatch({ type: 'SET_LEVEL', payload: activeState.currentLevel });
+            dispatch({ type: 'SET_SESSION', payload: activeState.session });
+            dispatch({ type: 'SET_SESSION_START', payload: activeState.sessionStartTime });
+            if (activeState.currentQuestion) {
+                dispatch({ type: 'SET_QUESTION', payload: activeState.currentQuestion });
+            }
+            // Restart the robux timer
+            RobuxTimer.startTimer('clockwise');
+            // Unfreeze the global timer (was frozen when going to stats)
+            GlobalTimer.unfreezeTimer();
+            // Create new statistics session
+            currentSessionIdRef.current = Statistics.createSession('clockwise', activeState.currentLevel);
+            Storage.clearActiveGameState('clockwise');
+        }
     }, []);
 
     // Poll for robux updates
@@ -133,6 +154,7 @@ export const useGameState = () => {
             if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
                 setIsPaused(true);
                 RobuxTimer.pauseTimer();
+                GlobalTimer.pauseTimer();
                 if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
                 // End statistics session when pausing due to inactivity
                 if (currentSessionIdRef.current) {
@@ -151,10 +173,13 @@ export const useGameState = () => {
     // Track activity
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
+        // Record activity in global timer to prevent session timeout
+        GlobalTimer.recordActivity();
         if (isPaused) {
             setIsPaused(false);
             // Resume timers
             RobuxTimer.resumeTimer();
+            GlobalTimer.resumeTimer();
             if (state.session) {
                 sessionTimerRef.current = setInterval(() => {
                     dispatch({ type: 'SET_TIMER', payload: Date.now() });
@@ -225,6 +250,9 @@ export const useGameState = () => {
 
         // Start centralized robux timer
         RobuxTimer.startTimer('clockwise');
+        
+        // Start global session timer (continues across games)
+        GlobalTimer.startSession();
 
         // Create statistics session
         currentSessionIdRef.current = Statistics.createSession('clockwise', level);
@@ -452,6 +480,13 @@ export const useGameState = () => {
         RobuxTimer.stopTimer();
         stopQuestionTimer();
 
+        // End statistics session if active
+        if (currentSessionIdRef.current) {
+            const robuxEarned = RobuxTimer.getRobuxEarned();
+            Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'completion');
+            currentSessionIdRef.current = null;
+        }
+
         dispatch({ type: 'SET_SESSION', payload: null });
         dispatch({ type: 'SET_SCREEN', payload: 'welcome' });
     }, [stopQuestionTimer]);
@@ -531,10 +566,9 @@ export const useGameState = () => {
     }, []);
 
     const getSessionTime = useCallback(() => {
-        if (!state.sessionStartTime) return '0:00';
-        const elapsed = RobuxTimer.getSessionDuration() * 1000; // Convert seconds to milliseconds
-        return formatDuration(elapsed);
-    }, [state.sessionStartTime, formatDuration]);
+        // Use global timer for session time display
+        return GlobalTimer.getFormattedTime();
+    }, []);
 
     return {
         state,

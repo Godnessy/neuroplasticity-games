@@ -1,159 +1,100 @@
 import * as Storage from './storage.js';
+import * as GlobalTimer from './globalSessionTimer.js';
 
 /**
- * Centralized Robux Timer Service
+ * Robux Timer Service
  *
- * Singleton service to manage ONE global robux timer across all games.
- * Fixes the bug where multiple games running timers simultaneously caused
- * robux over-accumulation (4 games = 4x robux per minute).
- *
- * Key Features:
- * - Single timer instance (prevents multiple concurrent timers)
- * - Tracks current game, start time, paused time
- * - Awards 1 robux per minute of actual play time
- * - Proper cleanup methods
+ * Awards 1 robux per minute of play time.
+ * Uses the Global Session Timer as the single source of truth for elapsed time.
+ * No separate clock - just monitors the global timer and awards robux at each minute mark.
  */
 
-// Singleton state
-let timerState = {
-  intervalId: null,
-  sessionStartTime: null,
-  totalPausedTime: 0,
-  pauseStartTime: null,
-  lastRobuxMinute: 0,
-  currentGame: null,
-  isRunning: false,
-  isPaused: false
-};
+// State - only tracks last awarded minute to prevent double-awarding
+let lastAwardedMinute = 0;
+let intervalId = null;
+let isRunning = false;
 
 /**
- * Start the robux timer for a game
- * Stops any existing timer first to prevent multiple timers
- *
- * @param {string} gameName - Name of the game starting the timer
+ * Start monitoring for robux awards
+ * Uses the global timer's elapsed time - no separate clock
  */
-export const startTimer = (gameName) => {
-  // Stop any existing timer first
+export const startTimer = () => {
+  // Stop any existing monitoring
   stopTimer();
 
-  // Initialize state for new session
-  timerState.sessionStartTime = Date.now();
-  timerState.totalPausedTime = 0;
-  timerState.pauseStartTime = null;
-  timerState.lastRobuxMinute = 0;
-  timerState.currentGame = gameName;
-  timerState.isRunning = true;
-  timerState.isPaused = false;
+  // Get current minute from global timer to set baseline
+  const elapsed = GlobalTimer.getElapsedTime();
+  lastAwardedMinute = Math.floor(elapsed / 60000);
+  isRunning = true;
 
-  // Start the timer - checks every second
-  timerState.intervalId = setInterval(() => {
-    if (!timerState.isPaused && timerState.sessionStartTime) {
-      // Calculate elapsed time minus paused time
-      const elapsed = Date.now() - timerState.sessionStartTime - timerState.totalPausedTime;
-      const currentMinute = Math.floor(elapsed / 60000);
+  // Check every second if we've crossed a minute boundary
+  intervalId = setInterval(() => {
+    const currentElapsed = GlobalTimer.getElapsedTime();
+    const currentMinute = Math.floor(currentElapsed / 60000);
 
-      // Award 1 robux per minute
-      if (currentMinute > timerState.lastRobuxMinute) {
-        timerState.lastRobuxMinute = currentMinute;
-        const current = Storage.getRobuxCount();
-        const updated = current + 1;
-        Storage.setRobuxCount(updated);
-
-        console.log(`[RobuxTimer] ${gameName} - Earned 1 robux (Total: ${updated}, Minute: ${currentMinute})`);
-      }
+    // Award robux when crossing minute boundaries
+    if (currentMinute > lastAwardedMinute) {
+      const robuxToAward = currentMinute - lastAwardedMinute;
+      lastAwardedMinute = currentMinute;
+      const current = Storage.getRobuxCount();
+      Storage.setRobuxCount(current + robuxToAward);
     }
   }, 1000);
-
-  console.log(`[RobuxTimer] Started timer for ${gameName}`);
 };
 
 /**
- * Stop the robux timer completely
- * Clears interval and resets all state
+ * Stop monitoring for robux awards
  */
 export const stopTimer = () => {
-  if (timerState.intervalId) {
-    clearInterval(timerState.intervalId);
-    console.log(`[RobuxTimer] Stopped timer for ${timerState.currentGame}`);
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
   }
-
-  // Reset state
-  timerState.intervalId = null;
-  timerState.sessionStartTime = null;
-  timerState.totalPausedTime = 0;
-  timerState.pauseStartTime = null;
-  timerState.lastRobuxMinute = 0;
-  timerState.currentGame = null;
-  timerState.isRunning = false;
-  timerState.isPaused = false;
+  isRunning = false;
 };
 
 /**
- * Pause the robux timer
- * Records pause start time but keeps interval running (in paused mode)
+ * Pause/Resume are no-ops now - the global timer handles all timing
+ * These functions exist for API compatibility but do nothing
  */
 export const pauseTimer = () => {
-  if (timerState.isRunning && !timerState.isPaused) {
-    timerState.isPaused = true;
-    timerState.pauseStartTime = Date.now();
-    console.log(`[RobuxTimer] Paused timer for ${timerState.currentGame}`);
-  }
+  // No-op: Global timer handles pause/freeze
 };
 
-/**
- * Resume the robux timer from pause
- * Adds pause duration to total paused time
- */
 export const resumeTimer = () => {
-  if (timerState.isRunning && timerState.isPaused && timerState.pauseStartTime) {
-    const pauseDuration = Date.now() - timerState.pauseStartTime;
-    timerState.totalPausedTime += pauseDuration;
-    timerState.pauseStartTime = null;
-    timerState.isPaused = false;
-    console.log(`[RobuxTimer] Resumed timer for ${timerState.currentGame} (Pause duration: ${Math.round(pauseDuration / 1000)}s)`);
-  }
+  // No-op: Global timer handles resume/unfreeze
 };
 
 /**
- * Get current robux earned in this session
- *
- * @returns {number} Number of robux earned in current session
+ * Get robux earned based on global timer elapsed time
  */
 export const getRobuxEarned = () => {
-  if (!timerState.sessionStartTime) return 0;
-
-  const elapsed = Date.now() - timerState.sessionStartTime - timerState.totalPausedTime;
+  const elapsed = GlobalTimer.getElapsedTime();
   return Math.floor(elapsed / 60000);
 };
 
 /**
- * Get current session duration in seconds (excluding paused time)
- *
- * @returns {number} Duration in seconds
+ * Get session duration from global timer
  */
 export const getSessionDuration = () => {
-  if (!timerState.sessionStartTime) return 0;
-
-  const elapsed = Date.now() - timerState.sessionStartTime - timerState.totalPausedTime;
+  const elapsed = GlobalTimer.getElapsedTime();
   return Math.floor(elapsed / 1000);
 };
 
 /**
  * Get timer state (for debugging)
- *
- * @returns {object} Current timer state
  */
 export const getTimerState = () => {
   return {
-    ...timerState,
-    sessionDuration: getSessionDuration(),
+    isRunning,
+    lastAwardedMinute,
+    globalElapsed: GlobalTimer.getElapsedTime(),
     robuxEarned: getRobuxEarned()
   };
 };
 
 /**
- * Force cleanup - for emergency situations
- * Same as stopTimer but more explicit name
+ * Force cleanup
  */
 export const cleanup = () => {
   stopTimer();

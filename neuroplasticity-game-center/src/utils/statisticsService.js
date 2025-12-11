@@ -61,7 +61,6 @@ export const createSession = (gameName, level) => {
     };
 
     activeSessions.set(sessionId, session);
-    console.log(`[Statistics] Created session ${sessionId} for ${gameName} level ${level}`);
 
     return sessionId;
 };
@@ -96,8 +95,7 @@ export const addAnswerToSession = (sessionId, answerData) => {
         session.currentStreak = 0;
     }
 
-    console.log(`[Statistics] Added answer to session ${sessionId}: ${answer.correct ? 'correct' : 'incorrect'}`);
-};
+    };
 
 /**
  * End a session and save to localStorage
@@ -133,8 +131,7 @@ export const endSession = (sessionId, robuxEarned = 0, endReason = 'completion')
         totalBreakTime = 0;
     }
 
-    console.log(`[Statistics] Ended session ${sessionId} (${endReason}): ${session.duration}s, ${robuxEarned} robux`);
-};
+    };
 
 /**
  * Save session to localStorage
@@ -152,7 +149,6 @@ const saveSessionToStorage = (session) => {
         const trimmed = sessions.slice(-100);
 
         localStorage.setItem(key, JSON.stringify(trimmed));
-        console.log(`[Statistics] Saved session to ${key}`);
     } catch (error) {
         console.error('[Statistics] Failed to save session:', error);
     }
@@ -199,7 +195,6 @@ const updateProgress = (session) => {
         progress.levelStats[session.level].timesPlayed++;
 
         localStorage.setItem(key, JSON.stringify(progress));
-        console.log(`[Statistics] Updated progress for ${session.gameName}`);
     } catch (error) {
         console.error('[Statistics] Failed to update progress:', error);
     }
@@ -354,7 +349,6 @@ export const getContinuousPlayTime = () => {
 export const resetContinuousPlayTimer = () => {
     continuousPlayStartTime = Date.now();
     totalBreakTime = 0;
-    console.log('[Statistics] Reset continuous play timer');
 };
 
 /**

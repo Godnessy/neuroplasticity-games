@@ -4,6 +4,7 @@ import * as Storage from '../../utils/storage';
 import * as Levels from '../../utils/timeOfDayLevels';
 import * as RobuxTimer from '../../utils/robuxTimerService';
 import * as Statistics from '../../utils/statisticsService';
+import * as GlobalTimer from '../../utils/globalSessionTimer';
 import Header from '../../components/shared/Header';
 import FeedbackModal from '../../components/shared/FeedbackModal';
 import RobuxCounter from '../../components/shared/RobuxCounter';
@@ -12,6 +13,7 @@ import BreakModal from '../../components/shared/BreakModal';
 
 const initialState = {
     currentScreen: 'welcome',
+    previousScreen: null,
     currentLevel: 1,
     currentQuestion: null,
     session: null,
@@ -26,7 +28,7 @@ const initialState = {
 
 const reducer = (state, action) => {
     switch (action.type) {
-        case 'SET_SCREEN': return { ...state, currentScreen: action.payload };
+        case 'SET_SCREEN': return { ...state, previousScreen: state.currentScreen, currentScreen: action.payload };
         case 'SET_LEVEL': return { ...state, currentLevel: action.payload };
         case 'SET_QUESTION': return { ...state, currentQuestion: action.payload, hintsUsed: 0 };
         case 'SET_SESSION': return { ...state, session: action.payload };
@@ -46,7 +48,7 @@ function TimeOfDayGame() {
     const navigate = useNavigate();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [hintText, setHintText] = useState('');
-    const [sessionTime, setSessionTime] = useState('0:00');
+    const [sessionTime, setSessionTime] = useState(GlobalTimer.getFormattedTime());
     const [isPaused, setIsPaused] = useState(false);
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [breakSessionStats, setBreakSessionStats] = useState(null);
@@ -64,6 +66,26 @@ function TimeOfDayGame() {
         if (savedProgress.currentLevel) {
             dispatch({ type: 'SET_LEVEL', payload: savedProgress.currentLevel });
         }
+        
+        // Restore active game state if returning from stats
+        const activeState = Storage.getActiveGameState('timeofday');
+        if (activeState && activeState.currentScreen === 'game') {
+            dispatch({ type: 'SET_SCREEN', payload: 'game' });
+            dispatch({ type: 'SET_LEVEL', payload: activeState.currentLevel });
+            dispatch({ type: 'SET_SESSION', payload: activeState.session });
+            dispatch({ type: 'SET_SESSION_START', payload: activeState.sessionStartTime });
+            if (activeState.currentQuestion) {
+                dispatch({ type: 'SET_QUESTION', payload: activeState.currentQuestion });
+            }
+            // Restart the robux timer
+            RobuxTimer.startTimer('timeofday');
+            // Unfreeze the global timer (was frozen when going to stats)
+            GlobalTimer.unfreezeTimer();
+            // Create new statistics session
+            currentSessionIdRef.current = Statistics.createSession('timeofday', activeState.currentLevel);
+            Storage.clearActiveGameState('timeofday');
+        }
+        
         return () => {
             // End statistics session if active
             if (currentSessionIdRef.current) {
@@ -72,6 +94,8 @@ function TimeOfDayGame() {
                 currentSessionIdRef.current = null;
             }
             RobuxTimer.stopTimer();
+            // Freeze global timer when leaving game (will resume when entering another game)
+            GlobalTimer.freezeTimer();
             if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
         };
     }, []);
@@ -95,6 +119,7 @@ function TimeOfDayGame() {
             if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
                 setIsPaused(true);
                 RobuxTimer.pauseTimer();
+                GlobalTimer.pauseTimer();
                 // End statistics session when pausing due to inactivity
                 if (currentSessionIdRef.current) {
                     const robuxEarned = RobuxTimer.getRobuxEarned();
@@ -111,9 +136,12 @@ function TimeOfDayGame() {
 
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
+        // Record activity in global timer to prevent session timeout
+        GlobalTimer.recordActivity();
         if (isPaused) {
             setIsPaused(false);
             RobuxTimer.resumeTimer();
+            GlobalTimer.resumeTimer();
             // Start new statistics session when resuming from pause
             if (!currentSessionIdRef.current && state.currentLevel) {
                 currentSessionIdRef.current = Statistics.createSession('timeofday', state.currentLevel);
@@ -124,10 +152,8 @@ function TimeOfDayGame() {
     useEffect(() => {
         if (!state.sessionStartTime || isPaused) return;
         const timer = setInterval(() => {
-            const elapsed = RobuxTimer.getSessionDuration();
-            const mins = Math.floor(elapsed / 60);
-            const secs = elapsed % 60;
-            setSessionTime(`${mins}:${secs.toString().padStart(2, '0')}`);
+            // Use global timer for session time display
+            setSessionTime(GlobalTimer.getFormattedTime());
         }, 1000);
         return () => clearInterval(timer);
     }, [state.sessionStartTime, isPaused]);
@@ -179,6 +205,9 @@ function TimeOfDayGame() {
 
         // Start centralized robux timer
         RobuxTimer.startTimer('timeofday');
+        
+        // Start global session timer (continues across games)
+        GlobalTimer.startSession();
 
         // Create statistics session
         currentSessionIdRef.current = Statistics.createSession('timeofday', targetLevel);
@@ -311,7 +340,7 @@ function TimeOfDayGame() {
                             <h2>Time of Day</h2>
                             <p className="welcome-subtitle">Learn times of day in English & Norwegian</p>
                             <button className="btn btn-primary btn-large" onClick={() => startSession()}>Start Learning</button>
-                            <button className="btn btn-secondary" onClick={() => navigate('/stats?game=timeofday')} style={{ marginTop: '10px' }}>
+                            <button className="btn btn-secondary" onClick={() => navigate('/stats?game=timeofday', { state: { from: '/timeofday' } })} style={{ marginTop: '10px' }}>
                                 📊 View Statistics
                             </button>
                         </div>
@@ -321,10 +350,9 @@ function TimeOfDayGame() {
                 return (
                     <section className="screen screen-game active">
                         <div className="game-header">
-                            <button className="btn btn-back" onClick={() => navigate('/')}>
+                            <button className="btn btn-back" onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'welcome' })}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                    <path d="M19 12H5M12 19l-7-7 7-7"/>
                                 </svg>
                             </button>
                             <div className="level-info">
@@ -390,7 +418,10 @@ function TimeOfDayGame() {
                 return (
                     <section className="screen screen-settings active">
                         <div className="dashboard-header">
-                            <button className="btn btn-back" onClick={() => dispatch({ type: 'SET_SCREEN', payload: 'welcome' })}>
+                            <button className="btn btn-back" onClick={() => {
+                                GlobalTimer.unfreezeTimer();
+                                dispatch({ type: 'SET_SCREEN', payload: state.previousScreen || 'welcome' });
+                            }}>
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                                 </svg>
@@ -454,8 +485,25 @@ function TimeOfDayGame() {
     return (
         <div className="app">
             <Header
-                onSettings={() => dispatch({ type: 'SET_SCREEN', payload: 'settings' })}
-                onDashboard={() => dispatch({ type: 'SET_SCREEN', payload: 'dashboard' })}
+                title="Time of Day"
+                onSettings={() => {
+                    GlobalTimer.freezeTimer();
+                    dispatch({ type: 'SET_SCREEN', payload: 'settings' });
+                }}
+                onStatistics={() => {
+                    GlobalTimer.freezeTimer();
+                    // Save current game state before navigating
+                    if (state.currentScreen === 'game' && state.session) {
+                        Storage.saveActiveGameState('timeofday', {
+                            currentScreen: state.currentScreen,
+                            currentLevel: state.currentLevel,
+                            session: state.session,
+                            sessionStartTime: state.sessionStartTime,
+                            currentQuestion: state.currentQuestion
+                        });
+                    }
+                    navigate('/stats?game=timeofday', { state: { from: '/timeofday' } });
+                }}
                 onHome={() => navigate('/')}
             />
             <main className="main">
