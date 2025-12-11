@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as Storage from '../../../utils/storage';
 import { generateProgressReport } from '../../../utils/adaptive';
 import { getLevel } from '../../../utils/levels';
 
 const Dashboard = ({ onBack, formatDuration, onExport, onReset }) => {
+    const navigate = useNavigate();
     const [report, setReport] = useState(null);
     const [sessions, setSessions] = useState([]);
 
@@ -152,6 +154,9 @@ const Dashboard = ({ onBack, formatDuration, onExport, onReset }) => {
                     </div>
                 </div>
                 <div className="dashboard-actions">
+                    <button className="btn btn-primary" onClick={() => navigate('/stats?game=clockwise')}>
+                        📊 View Detailed Statistics
+                    </button>
                     <button className="btn btn-secondary" onClick={onExport}>
                         Export Progress (JSON)
                     </button>

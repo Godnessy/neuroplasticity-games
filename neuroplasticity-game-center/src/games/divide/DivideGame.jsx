@@ -2,10 +2,13 @@ import { useNavigate } from 'react-router-dom';
 import { useReducer, useCallback, useRef, useEffect, useState } from 'react';
 import * as Storage from '../../utils/storage';
 import * as Levels from '../../utils/divideLevels';
+import * as RobuxTimer from '../../utils/robuxTimerService';
+import * as Statistics from '../../utils/statisticsService';
 import Header from '../../components/shared/Header';
 import FeedbackModal from '../../components/shared/FeedbackModal';
 import RobuxCounter from '../../components/shared/RobuxCounter';
 import DivisionLegend from './DivisionLegend';
+import BreakModal from '../../components/shared/BreakModal';
 
 const initialState = {
     currentScreen: 'welcome',
@@ -46,14 +49,14 @@ function DivideGame() {
     const [hintText, setHintText] = useState('');
     const [sessionTime, setSessionTime] = useState('0:00');
     const [isPaused, setIsPaused] = useState(false);
-    const robuxTimerRef = useRef(null);
-    const lastRobuxMinuteRef = useRef(0);
+    const [showBreakModal, setShowBreakModal] = useState(false);
+    const [breakSessionStats, setBreakSessionStats] = useState(null);
     const isChangingLevelRef = useRef(false);
     const lastActivityRef = useRef(0);
     const pauseCheckRef = useRef(null);
-    const pauseStartTimeRef = useRef(null);
-    const totalPausedTimeRef = useRef(0);
+    const currentSessionIdRef = useRef(null);
     const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
+    const BREAK_REMINDER_TIME = 20 * 60; // 20 minutes in seconds
 
     useEffect(() => {
         dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
@@ -64,9 +67,22 @@ function DivideGame() {
             dispatch({ type: 'SET_LEVEL', payload: savedProgress.currentLevel });
         }
         return () => {
-            if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
+            // End statistics session if active
+            if (currentSessionIdRef.current) {
+                const robuxEarned = RobuxTimer.getRobuxEarned();
+                Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'navigation');
+                currentSessionIdRef.current = null;
+            }
+            RobuxTimer.stopTimer();
             if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
         };
+    }, []);
+
+    // Poll for robux updates
+    useEffect(() => {
+        const updateRobux = () => dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
+        const interval = setInterval(updateRobux, 1000);
+        return () => clearInterval(interval);
     }, []);
 
     // Inactivity pause check
@@ -81,8 +97,13 @@ function DivideGame() {
         pauseCheckRef.current = setInterval(() => {
             if (Date.now() - lastActivityRef.current > INACTIVITY_TIMEOUT && !isPaused) {
                 setIsPaused(true);
-                pauseStartTimeRef.current = Date.now();
-                if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
+                RobuxTimer.pauseTimer();
+                // End statistics session when pausing due to inactivity
+                if (currentSessionIdRef.current) {
+                    const robuxEarned = RobuxTimer.getRobuxEarned();
+                    Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'pause');
+                    currentSessionIdRef.current = null;
+                }
             }
         }, 1000);
         
@@ -94,36 +115,52 @@ function DivideGame() {
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
         if (isPaused) {
-            if (pauseStartTimeRef.current) {
-                totalPausedTimeRef.current += Date.now() - pauseStartTimeRef.current;
-                pauseStartTimeRef.current = null;
-            }
             setIsPaused(false);
-            if (state.session) {
-                robuxTimerRef.current = setInterval(() => {
-                    const elapsed = Date.now() - state.session.startTime - totalPausedTimeRef.current;
-                    const minutes = Math.floor(elapsed / 60000);
-                    if (minutes > lastRobuxMinuteRef.current) {
-                        lastRobuxMinuteRef.current = minutes;
-                        const newRobux = Storage.getRobuxCount() + 1;
-                        Storage.setRobuxCount(newRobux);
-                        dispatch({ type: 'SET_ROBUX', payload: newRobux });
-                    }
-                }, 1000);
+            RobuxTimer.resumeTimer();
+            // Start new statistics session when resuming from pause
+            if (!currentSessionIdRef.current && state.currentLevel) {
+                currentSessionIdRef.current = Statistics.createSession('divide', state.currentLevel);
             }
         }
-    }, [isPaused, state.session]);
+    }, [isPaused, state.currentLevel]);
 
     useEffect(() => {
         if (!state.sessionStartTime || isPaused) return;
         const timer = setInterval(() => {
-            const elapsed = Date.now() - state.sessionStartTime - totalPausedTimeRef.current;
-            const mins = Math.floor(elapsed / 60000);
-            const secs = Math.floor((elapsed % 60000) / 1000);
+            const elapsed = RobuxTimer.getSessionDuration();
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
             setSessionTime(`${mins}:${secs.toString().padStart(2, '0')}`);
         }, 1000);
         return () => clearInterval(timer);
     }, [state.sessionStartTime, isPaused]);
+
+    // Check for 20-minute break reminder
+    useEffect(() => {
+        if (!state.sessionStartTime || state.currentScreen !== 'game' || isPaused || showBreakModal) return;
+
+        const checkBreakTime = setInterval(() => {
+            // Note: state.session is captured by closure and will have latest value
+            const continuousTime = Statistics.getContinuousPlayTime();
+            if (continuousTime >= BREAK_REMINDER_TIME) {
+                const correctAnswers = (state.session?.answers || []).filter(a => a.correct).length;
+                const totalAnswers = (state.session?.answers || []).length;
+                const robuxEarned = RobuxTimer.getRobuxEarned();
+                const playTime = RobuxTimer.getSessionDuration();
+
+                setBreakSessionStats({
+                    playTime,
+                    questionsAnswered: totalAnswers,
+                    correctAnswers,
+                    robuxEarned
+                });
+                setShowBreakModal(true);
+            }
+        }, 5000);
+
+        return () => clearInterval(checkBreakTime);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.sessionStartTime, state.currentScreen, isPaused, showBreakModal, BREAK_REMINDER_TIME]);
 
     const generateQuestion = useCallback((levelOverride = null) => {
         const level = levelOverride !== null ? levelOverride : state.currentLevel;
@@ -142,22 +179,13 @@ function DivideGame() {
         const newSession = { level: targetLevel, startTime: Date.now(), answers: [], bestStreak: 0, currentStreak: 0 };
         dispatch({ type: 'SET_SESSION', payload: newSession });
         dispatch({ type: 'SET_SESSION_START', payload: Date.now() });
-        lastRobuxMinuteRef.current = 0;
-        totalPausedTimeRef.current = 0;
-        pauseStartTimeRef.current = null;
         setHintText('');
 
-        if (robuxTimerRef.current) clearInterval(robuxTimerRef.current);
-        robuxTimerRef.current = setInterval(() => {
-            const elapsed = Date.now() - newSession.startTime;
-            const minutes = Math.floor(elapsed / 60000);
-            if (minutes > lastRobuxMinuteRef.current) {
-                lastRobuxMinuteRef.current = minutes;
-                const newRobux = Storage.getRobuxCount() + 1;
-                Storage.setRobuxCount(newRobux);
-                dispatch({ type: 'SET_ROBUX', payload: newRobux });
-            }
-        }, 1000);
+        // Start centralized robux timer
+        RobuxTimer.startTimer('divide');
+
+        // Create statistics session
+        currentSessionIdRef.current = Statistics.createSession('divide', targetLevel);
 
         const question = Levels.generateQuestion(levelConfig);
         const choices = Levels.generateChoices(question.correctAnswer);
@@ -172,6 +200,22 @@ function DivideGame() {
             setHintText(state.currentQuestion.hint);
             dispatch({ type: 'INCREMENT_HINTS' });
         }
+    };
+
+    const handleTakeBreak = () => {
+        if (currentSessionIdRef.current) {
+            const robuxEarned = RobuxTimer.getRobuxEarned();
+            Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'break_modal');
+            currentSessionIdRef.current = null;
+        }
+        RobuxTimer.stopTimer();
+        setShowBreakModal(false);
+        navigate('/');
+    };
+
+    const handleContinuePlaying = () => {
+        Statistics.resetContinuousPlayTimer();
+        setShowBreakModal(false);
     };
 
     const changeLevel = (newLevel) => {
@@ -204,7 +248,16 @@ function DivideGame() {
 
         const isCorrect = answer === state.currentQuestion.correctAnswer;
         const questionsRequired = state.settings.questionsPerLevel;
-        
+
+        // Record answer in statistics
+        if (currentSessionIdRef.current) {
+            Statistics.addAnswerToSession(currentSessionIdRef.current, {
+                correct: isCorrect,
+                responseTime: 0, // DivideMaster doesn't track individual response times
+                level: state.currentLevel
+            });
+        }
+
         const correctCount = (state.session?.answers || []).filter(a => a.correct).length + (isCorrect ? 1 : 0);
         const newAnswers = [...(state.session?.answers || []), { correct: isCorrect }];
         const newStreak = isCorrect ? (state.session?.currentStreak || 0) + 1 : 0;
@@ -278,6 +331,9 @@ function DivideGame() {
                             <h2>DivideMaster</h2>
                             <p className="welcome-subtitle">Learn division through understanding</p>
                             <button className="btn btn-primary btn-large" onClick={() => startSession()}>Start Learning</button>
+                            <button className="btn btn-secondary" onClick={() => navigate('/stats?game=divide')} style={{ marginTop: '10px' }}>
+                                📊 View Statistics
+                            </button>
                         </div>
                     </section>
                 );
@@ -431,6 +487,12 @@ function DivideGame() {
             <main className="main">
                 {renderScreen()}
             </main>
+            <BreakModal
+                show={showBreakModal}
+                sessionStats={breakSessionStats}
+                onTakeBreak={handleTakeBreak}
+                onContinue={handleContinuePlaying}
+            />
         </div>
     );
 }

@@ -343,3 +343,114 @@ export const saveTimeOfDayProgress = (progress) => {
         console.error('Failed to save timeofday progress');
     }
 };
+
+// ============================================================================
+// Enhanced Statistics Storage Functions
+// ============================================================================
+
+/**
+ * Get enhanced progress for a game
+ * @param {string} gameName - Game name (clockwise, multiply, divide, timeofday)
+ * @returns {object} Enhanced progress object
+ */
+export const getEnhancedProgress = (gameName) => {
+    try {
+        const key = `${gameName}_enhanced_progress`;
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+        console.error(`Failed to get enhanced progress for ${gameName}:`, error);
+        return null;
+    }
+};
+
+/**
+ * Save enhanced progress for a game
+ * @param {string} gameName - Game name
+ * @param {object} progress - Progress object
+ */
+export const saveEnhancedProgress = (gameName, progress) => {
+    try {
+        const key = `${gameName}_enhanced_progress`;
+        localStorage.setItem(key, JSON.stringify(progress));
+    } catch (error) {
+        console.error(`Failed to save enhanced progress for ${gameName}:`, error);
+    }
+};
+
+/**
+ * Get enhanced sessions for a game
+ * @param {string} gameName - Game name
+ * @returns {array} Array of session objects
+ */
+export const getEnhancedSessions = (gameName) => {
+    try {
+        const key = `${gameName}_enhanced_sessions`;
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+        console.error(`Failed to get enhanced sessions for ${gameName}:`, error);
+        return [];
+    }
+};
+
+/**
+ * Save enhanced sessions for a game
+ * @param {string} gameName - Game name
+ * @param {array} sessions - Array of session objects
+ */
+export const saveEnhancedSessions = (gameName, sessions) => {
+    try {
+        const key = `${gameName}_enhanced_sessions`;
+        // Keep only last 100 sessions
+        const trimmed = sessions.slice(-100);
+        localStorage.setItem(key, JSON.stringify(trimmed));
+    } catch (error) {
+        console.error(`Failed to save enhanced sessions for ${gameName}:`, error);
+    }
+};
+
+/**
+ * Get all games statistics summary
+ * @returns {object} Summary of all games
+ */
+export const getAllGamesStats = () => {
+    try {
+        const key = 'neuroplasticity_all_games_stats';
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : null;
+    } catch (error) {
+        console.error('Failed to get all games stats:', error);
+        return null;
+    }
+};
+
+/**
+ * Save all games statistics summary
+ * @param {object} stats - Statistics object
+ */
+export const saveAllGamesStats = (stats) => {
+    try {
+        const key = 'neuroplasticity_all_games_stats';
+        localStorage.setItem(key, JSON.stringify(stats));
+    } catch (error) {
+        console.error('Failed to save all games stats:', error);
+    }
+};
+
+/**
+ * Clear all enhanced statistics (for testing/reset)
+ */
+export const clearEnhancedStats = () => {
+    try {
+        const games = ['clockwise', 'multiply', 'divide', 'timeofday'];
+        games.forEach(game => {
+            localStorage.removeItem(`${game}_enhanced_progress`);
+            localStorage.removeItem(`${game}_enhanced_sessions`);
+        });
+        localStorage.removeItem('neuroplasticity_all_games_stats');
+        console.log('Cleared all enhanced statistics');
+    } catch (error) {
+        console.error('Failed to clear enhanced stats:', error);
+    }
+};

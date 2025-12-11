@@ -79,7 +79,12 @@ const Home = ({ robuxCount, onResetRobux }) => {
                         </h1>
                         <p className="tagline">Train your brain through play!</p>
                     </div>
-                    <RobuxCounter count={robuxCount} onReset={onResetRobux} />
+                    <div className="header-actions">
+                        <Link to="/stats" className="btn-stats">
+                            📊 View Statistics
+                        </Link>
+                        <RobuxCounter count={robuxCount} onReset={onResetRobux} />
+                    </div>
                 </div>
             </header>
 

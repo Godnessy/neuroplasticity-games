@@ -1,6 +1,9 @@
 import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useGameState } from '../../hooks/useGameState';
 import * as Storage from '../../utils/storage';
+import * as RobuxTimer from '../../utils/robuxTimerService';
+import * as Statistics from '../../utils/statisticsService';
 import Header from '../../components/shared/Header';
 import Welcome from './screens/Welcome';
 import Game from './screens/Game';
@@ -8,6 +11,7 @@ import LevelComplete from './screens/LevelComplete';
 import Dashboard from './screens/Dashboard';
 import Settings from './screens/Settings';
 import Break from './screens/Break';
+import BreakModal from '../../components/shared/BreakModal';
 
 function ClockwiseGame() {
     const navigate = useNavigate();
@@ -35,8 +39,40 @@ function ClockwiseGame() {
         getSessionTime,
         generateQuestion,
         isPaused,
-        recordActivity
+        recordActivity,
+        currentSessionIdRef
     } = useGameState();
+
+    const [showBreakModal, setShowBreakModal] = useState(false);
+    const [breakSessionStats, setBreakSessionStats] = useState(null);
+    const BREAK_REMINDER_TIME = 20 * 60; // 20 minutes in seconds
+
+    // Check for 20-minute break reminder
+    useEffect(() => {
+        if (!state.sessionStartTime || state.currentScreen !== 'game' || isPaused || showBreakModal) return;
+
+        const checkBreakTime = setInterval(() => {
+            // Note: state.session is captured by closure and will have latest value
+            const continuousTime = Statistics.getContinuousPlayTime();
+            if (continuousTime >= BREAK_REMINDER_TIME) {
+                const correctAnswers = (state.session?.answers || []).filter(a => a.correct).length;
+                const totalAnswers = (state.session?.answers || []).length;
+                const robuxEarned = RobuxTimer.getRobuxEarned();
+                const playTime = RobuxTimer.getSessionDuration();
+
+                setBreakSessionStats({
+                    playTime,
+                    questionsAnswered: totalAnswers,
+                    correctAnswers,
+                    robuxEarned
+                });
+                setShowBreakModal(true);
+            }
+        }, 5000); // Check every 5 seconds
+
+        return () => clearInterval(checkBreakTime);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [state.sessionStartTime, state.currentScreen, isPaused, showBreakModal, BREAK_REMINDER_TIME]);
 
     const handleExportData = () => {
         const data = Storage.exportData();
@@ -57,6 +93,22 @@ function ClockwiseGame() {
     const handleGoHome = () => {
         goHome();
         navigate('/');
+    };
+
+    const handleTakeBreak = () => {
+        // End session and navigate home
+        if (currentSessionIdRef?.current) {
+            const robuxEarned = RobuxTimer.getRobuxEarned();
+            Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'break_modal');
+        }
+        goHome();
+        setShowBreakModal(false);
+        navigate('/');
+    };
+
+    const handleContinuePlaying = () => {
+        Statistics.resetContinuousPlayTimer();
+        setShowBreakModal(false);
     };
 
     const renderScreen = () => {
@@ -162,6 +214,12 @@ function ClockwiseGame() {
             <main className="main">
                 {renderScreen()}
             </main>
+            <BreakModal
+                show={showBreakModal}
+                sessionStats={breakSessionStats}
+                onTakeBreak={handleTakeBreak}
+                onContinue={handleContinuePlaying}
+            />
         </div>
     );
 }
