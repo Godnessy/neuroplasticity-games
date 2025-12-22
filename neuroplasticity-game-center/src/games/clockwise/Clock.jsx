@@ -100,8 +100,8 @@ const Clock = ({
                         x={textX}
                         y={textY}
                         className="clock-minute-number"
-                        fontSize="12"
-                        fill="var(--color-text-muted)"
+                        fontSize="20"
+                        fill="green"
                         textAnchor="middle"
                         dominantBaseline="central"
                     >

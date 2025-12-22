@@ -92,7 +92,7 @@ export const useGameState = () => {
     const lastActivityRef = useRef(0);
     const pauseCheckRef = useRef(null);
     const currentSessionIdRef = useRef(null);
-    const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
+    const INACTIVITY_TIMEOUT = 60 * 1000; 
 
     useEffect(() => {
         const settings = Storage.getSettings();
@@ -114,7 +114,6 @@ export const useGameState = () => {
             document.body.setAttribute('data-contrast', 'high');
         }
         
-        // Restore active game state if returning from stats
         const activeState = Storage.getActiveGameState('clockwise');
         if (activeState && activeState.currentScreen === 'game') {
             dispatch({ type: 'SET_SCREEN', payload: 'game' });
@@ -124,24 +123,19 @@ export const useGameState = () => {
             if (activeState.currentQuestion) {
                 dispatch({ type: 'SET_QUESTION', payload: activeState.currentQuestion });
             }
-            // Restart the robux timer
             RobuxTimer.startTimer('clockwise');
-            // Unfreeze the global timer (was frozen when going to stats)
             GlobalTimer.unfreezeTimer();
-            // Create new statistics session
             currentSessionIdRef.current = Statistics.createSession('clockwise', activeState.currentLevel);
             Storage.clearActiveGameState('clockwise');
         }
     }, []);
 
-    // Poll for robux updates
     useEffect(() => {
         const updateRobux = () => dispatch({ type: 'SET_ROBUX', payload: Storage.getRobuxCount() });
         const interval = setInterval(updateRobux, 1000);
         return () => clearInterval(interval);
     }, []);
 
-    // Inactivity pause check
     useEffect(() => {
         if (!state.sessionStartTime || state.currentScreen !== 'game') {
             if (pauseCheckRef.current) clearInterval(pauseCheckRef.current);
@@ -156,7 +150,6 @@ export const useGameState = () => {
                 RobuxTimer.pauseTimer();
                 GlobalTimer.pauseTimer();
                 if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
-                // End statistics session when pausing due to inactivity
                 if (currentSessionIdRef.current) {
                     const robuxEarned = RobuxTimer.getRobuxEarned();
                     Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'pause');
@@ -170,14 +163,11 @@ export const useGameState = () => {
         };
     }, [state.sessionStartTime, state.currentScreen, isPaused, INACTIVITY_TIMEOUT]);
 
-    // Track activity
     const recordActivity = useCallback(() => {
         lastActivityRef.current = Date.now();
-        // Record activity in global timer to prevent session timeout
         GlobalTimer.recordActivity();
         if (isPaused) {
             setIsPaused(false);
-            // Resume timers
             RobuxTimer.resumeTimer();
             GlobalTimer.resumeTimer();
             if (state.session) {
@@ -185,7 +175,6 @@ export const useGameState = () => {
                     dispatch({ type: 'SET_TIMER', payload: Date.now() });
                 }, 1000);
             }
-            // Start new statistics session when resuming from pause
             if (!currentSessionIdRef.current && state.currentLevel) {
                 currentSessionIdRef.current = Statistics.createSession('clockwise', state.currentLevel);
             }
@@ -248,13 +237,10 @@ export const useGameState = () => {
             dispatch({ type: 'SET_TIMER', payload: Date.now() });
         }, 1000);
 
-        // Start centralized robux timer
         RobuxTimer.startTimer('clockwise');
         
-        // Start global session timer (continues across games)
         GlobalTimer.startSession();
 
-        // Create statistics session
         currentSessionIdRef.current = Statistics.createSession('clockwise', level);
 
         const nextCharIndex = (state.characterIndex + 1) % CLOCK_CENTER_IMAGES.length;
@@ -303,7 +289,6 @@ export const useGameState = () => {
         const levelConfig = Levels.getLevel(state.currentLevel);
         
         let isCorrect;
-        // Check if this question asked for 24-hour format
         const shouldUse24Hour = correct.askFor24Hour !== undefined 
             ? correct.askFor24Hour 
             : (levelConfig.show24Hour && correct.hour24 !== undefined);
@@ -318,7 +303,6 @@ export const useGameState = () => {
 
         const responseTime = Date.now() - questionStartTimeRef.current;
 
-        // Record answer in statistics
         if (currentSessionIdRef.current) {
             Statistics.addAnswerToSession(currentSessionIdRef.current, {
                 correct: isCorrect,
@@ -402,7 +386,6 @@ export const useGameState = () => {
     const completeLevelSession = useCallback(() => {
         if (sessionTimerRef.current) clearInterval(sessionTimerRef.current);
 
-        // End statistics session
         if (currentSessionIdRef.current) {
             const robuxEarned = RobuxTimer.getRobuxEarned();
             Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'completion');
@@ -480,7 +463,6 @@ export const useGameState = () => {
         RobuxTimer.stopTimer();
         stopQuestionTimer();
 
-        // End statistics session if active
         if (currentSessionIdRef.current) {
             const robuxEarned = RobuxTimer.getRobuxEarned();
             Statistics.endSession(currentSessionIdRef.current, robuxEarned, 'completion');
